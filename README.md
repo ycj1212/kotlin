@@ -134,7 +134,7 @@ fun eval(e: Expr): Int {
         // 컴파일러는 e를 Sum으로 해석
         return eval(e.right) + eval(e.left)
     }
-    throw illegalArgumentException("Unknown expression")
+    throw IllegalArgumentException("Unknown expression")
 }
 ```
 
@@ -145,3 +145,148 @@ fun eval(e: Expr): Int {
 - 명시적 캐스팅
 
 `val n = e as Num`
+
+### 리팩토링: if를 when으로 변경
+
+```kotlin
+fun eval(e: Expr): Int =
+    if (e is Num) {
+        e.value
+    } else if (e is Sum) {
+        eval(e.right) + eval(e.left)
+    } else {
+        throw IllegalArgumentException("Unknown expression")
+    }
+```
+
+- if 중첩 대신 when 사용하기
+
+```kotlin
+fun eval(e: Expr): Int =
+    when (e) {
+        is Num ->
+            e.value
+        is Sum ->
+            eval(e.right) + eval(e.left)
+        else ->
+            throw IllegalArgumentException("Unknown expression")
+    }
+```
+
+- 블록의 마지막 문장이 블록 전체의 결과
+
+```kotlin
+fun evalWithLogging(e: Expr): Int =
+    when (e) {
+        is Num -> {
+            println("num: ${e.value}")
+            e.value
+        }
+        is Sum -> {
+            val left = evalWithLogging(e.left)
+            val right = evalWithLogging(e.right)
+            println("sum: $left + $right")
+            left + right
+        }
+        else -> throw IllegalArgumentException("Unknown expression")
+    }
+
+>>> println(evalWithLogging(Sum(Sum(Num(1), Num(2)), Num(4))))
+```
+
+### 반목문
+
+- while
+
+```kotlin
+while (조건) {
+    /*...*/
+}
+
+do {
+    /*...*/
+} while (조건)
+```
+
+- for
+
+..연산자
+: 시작 값과 끝 값 범위의 값
+
+`val oneToTen = 1..10`
+
+```kotlin
+fun fizzBuzz(i: Int) = when {
+    i % 15 == 0 -> "FizzBuzz "
+    i % 3 == 0 -> "Fizz "
+    i % 5 == 0 -> "Buzz"
+    else -> "$i "
+}
+
+>>> for (i in 1..100) {
+    ... print(fizzBuzz(i))
+    ... }
+1 2 Fizz 4 Buzz Fizz 7 ...
+
+>>> for (i in 100 downTo 1 step 2) {
+    ... print(fizzBuzz(i))
+    ... }
+Buzz 98 Fizz 94 92 FizzBuzz 88 ... 
+```
+
+for (x in 0 until size) == for (x in 0..size-1)
+
+- map
+
+```kotlin
+val binaryReps = TreeMap<Char, String>()    // 키를 정렬하기 위해 TreeMap을 사용
+
+for (c in 'A'..'F') {
+    val binary = Integer.toBinaryString(c.toInt())
+    binaryReps[c] = binary
+}
+
+for ((letter, binary) in binaryReps) {
+    println("$letter = $binary")
+}
+```
+
+binaryReps[c] = binary == binaryReps.put(c, binary)
+
+```kotlin
+val list = arrayListOf("10", "11", "1001")
+for((index, element) in list.withIndex()) {
+    println("$index: $element")
+}
+```
+
+- 원소 검사
+
+```kotlin
+fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
+fun isNotDigit(c: Char) = c !in '0'..'9'
+
+>>> println(isLetter('q'))
+true
+>>> println(isNotDigit('x'))
+true
+```
+
+`c in 'a'..'z'  // 'a' <= c && c <= 'z'`
+
+```kotlin
+for recognize(c: Char) = when (c) {
+    in '0'..'9' -> "It's a digit!"
+    in 'a'..'z', in 'A'..'Z' -> "It's a letter!"
+    else -> "I don't know..."
+}
+
+>>> println(recognize('8'))
+It's a digit!
+
+>>> println("Kotlin" in "Java".."Scala")    // "Java" <= "Kotlin" && "Kotlin" <= "Scala">
+true
+
+>>> println("Kotlin" in setOf("Java", "Scala")) // 이 집합에는 "Kotlin"이 들어있지 않다.
+false
+```
