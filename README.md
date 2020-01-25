@@ -290,3 +290,77 @@ true
 >>> println("Kotlin" in setOf("Java", "Scala")) // 이 집합에는 "Kotlin"이 들어있지 않다.
 false
 ```
+
+### 예외 처리
+
+```kotlin
+if (percentage !in 0..100) {
+    throw IllegalArgumentException(
+        "A percentage value must be between 0 and 100: $percentage")
+}
+```
+
+```kotlin
+val percentage =
+    if (number in 0..100)
+        number
+    else
+        throw IllegalArgumentException(
+            "A percentage value must be between 0 and 100: $percentage")
+```
+
+- try, catch, finally
+
+```kotlin
+fun readNumber(reader: BufferedReader): Int? {
+    try {
+        val line = reader.readLine()
+        return Integer.parseInt(line)
+    }
+    catch (e: NumberFormatException) {
+        return null
+    }
+    finally {
+        reader.close()
+    }
+}
+
+>>> val reader = BufferedReader(StringReader("239"))
+>>> println(readNumber(reader))
+239
+```
+
+자바에서는 명시적으로 체크 예외 처리, 코틀린에서는 구별X
+
+- try를 식으로 사용
+
+```kotlin
+fun readNumber(reader: BufferedReader) {
+    val number = try {
+        Integer.parseInt(reader.readLine())
+    } catch (e: NumberFormatException) {
+        return
+    }
+    println(number)
+}
+
+>>> val reader = BufferedReader(StringReader("not a number"))
+>>> readNumber(reader)
+```
+
+코틀린의 try는 if, when과 같이 식이다.
+
+```kotlin
+fun readNumber(reader: BufferedReader) {
+    val number = try {
+        Integer.parseInt(reader.readLine())
+    } catch (e: NumberFormatException) {
+        null
+    }
+    println(number)
+}
+
+>>> val reader = BufferedReader(StringReader("not a number"))
+>>> readNumber(reader)
+null
+```
