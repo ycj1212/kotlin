@@ -364,3 +364,94 @@ fun readNumber(reader: BufferedReader) {
 >>> readNumber(reader)
 null
 ```
+
+## 3. 함수 정의와 호출
+
+### 컬렉션 만들기
+
+`val set = hashSetOf(1, 7, 53)`
+
+`val list = arrayListOf(1, 7, 53)`   
+`val map = hashMapOf(1 to "one", 7 to "seven", 53 to "fifty-three")`
+
+to는 키워드가 아니라 일반 함수
+
+```kotlin
+// 자바: getClass()
+>>> println(set.javaClass)
+class java.util.HashSet
+>>> println(list.javaClass)
+class java.util.ArrayList
+>>> println(map.javaClass)
+class java.util.HashMap
+```
+
+```kotlin
+>>> val strings = listOf("first", "second", "fourteenth")
+>>> println(strings.last())
+fourteenth
+>>> val numbers = setOf(1, 14, 2)
+>>> println(numbers.max())
+14
+```
+
+### 함수 호출을 쉽게 만들기
+
+```kotlin
+>>> val list = listOf(1, 2, 3)
+>>> println(list)   // toString() 호출
+[1, 2, 3]
+```
+
+joinToString 함수는 컬렉션의 원소를 StringBuilder의 뒤에 덧붙인다.  
+이때 원소 사이에 구분자를 추가하고, StringBuilder의 맨 앞과 맨 뒤에는 접두사와 접미사를 추가한다.
+
+```kotlin
+fun <T> joinToString (
+    collection: Collection<T>,
+    separator: String,
+    prefix: String,
+    postfix: String
+): String {
+    val result = StringBuilder(prefix)
+    for ((index, element) in collection.withIndex()) {
+        if (index > 0) result.append(separator)
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
+}
+```
+
+```kotlin
+>>> val list = listOf(1, 2, 3)
+>>> println(joinToString(list, "; ", "(", ")"))
+(1; 2; 3)
+```
+
+### 이름 붙인 인자
+
+함수 호출 부분의 가독성 해결
+
+함수의 인자들이 어떤 역할을 하는지 구분X...
+
+```java
+/* 자바 */
+joinToString(collection, /* separator */ " ", /* prefix */ " ", /* postfix */ ".");
+```
+
+```kotlin
+/* 코틀린 */
+joinToString(collection, separator = " ", prefix = " ", postfix = ".")
+```
+
+함수 호출 시 함수에 전달하는 인자 중 일부(또는 전부)의 이름을 명시할 수 있다.  
+하나라도 명시하고 나면 혼동을 막기 위해 그 뒤에 오는 모든 인자는 이름을 꼭 명시하여야 한다.
+
+⚠️경고  
+: 자바로 작성한 코드를 호출할 때는 이름 붙인 인자를 사용할 수 없다.  
+따라서 안드로이드 프레임워크나 JDK가 제공하는 함수를 호출할 때도 마찬가지로 이름 붙인 인자를 쓸 수 없다.  
+클래스 파일(.class 파일)에 함수 파라미터 정보를 넣는 것은 자바 8이후 추가된 선택적 특징인데,  
+코틀린은 JDK 6와 호환된다.  
+그 결과 코틀린 컴파일러는 함수 시그니처의 파라미터 이름을 인식할 수 없고,  
+호출 시 사용한 인자 이름과 함수 정의의 파라미터 이름을 비교할 수 없다.
