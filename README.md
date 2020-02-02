@@ -508,6 +508,8 @@ class java.util.ArrayList
 class java.util.HashMap
 ```
 
+기존 자바 컬렉션을 활용
+
 ```kotlin
 >>> val strings = listOf("first", "second", "fourteenth")
 >>> println(strings.last())
@@ -524,6 +526,8 @@ fourteenth
 >>> println(list)   // toString() 호출
 [1, 2, 3]
 ```
+
+자바 컬렉션에는 디폴트 toString 구현이 들어있다(출력 형식 고정..)
 
 joinToString 함수는 컬렉션의 원소를 StringBuilder의 뒤에 덧붙인다.  
 이때 원소 사이에 구분자를 추가하고, StringBuilder의 맨 앞과 맨 뒤에는 접두사와 접미사를 추가한다.
@@ -551,9 +555,9 @@ fun <T> joinToString (
 (1; 2; 3)
 ```
 
-### 이름 붙인 인자
+### - 이름 붙인 인자
 
-함수 호출 부분의 가독성 해결
+함수 호출 부분의 __가독성__ 해결
 
 함수의 인자들이 어떤 역할을 하는지 구분X...
 
@@ -577,3 +581,52 @@ joinToString(collection, separator = " ", prefix = " ", postfix = ".")
 코틀린은 JDK 6와 호환된다.  
 그 결과 코틀린 컴파일러는 함수 시그니처의 파라미터 이름을 인식할 수 없고,  
 호출 시 사용한 인자 이름과 함수 정의의 파라미터 이름을 비교할 수 없다.
+
+### - 디폴트 파라미터 값
+
+자바 일부 클래스에서 오버로딩(overloading)한 메소드가 너무 많아진다는 문제  
+함수 선언에서 파라미터의 디폴트 값을 지정할 수 있다.
+
+```kotlin
+fun <T> joinToString (
+    collection: Collection<T>,
+    separator: String = ", ",
+    prefix: String = "",
+    postfix: String = ""
+): String
+
+>>> joinToString(list, ", ", "", "")
+1, 2, 3
+>>> joinToString(list)
+1, 2, 3
+>>> joinToString(list, "; ")
+1; 2; 3
+```
+
+일부 생략 시 뒷부분의 인자들이 생략  
+이름 붙은 인자 사용 시 인자 목록의 중간에 있는 인자를 생략, 순서와 관계없이 지정 가능
+
+```kotlin
+>>> joinToString(list, postfix = ";", prefix = "# ")
+# 1, 2, 3;
+```
+
+함수의 디폴트 파라미터 값은 함수를 호출하는 쪽이 아니라 함수 선언 쪽에서 지정된다.  
+
+디폴트 값과 자바
+
+자바에서는 디폴트 파라미터 값이라는 개념이 없어서 코틀린 함수를 자바에서 호출하는 경우에는 그 코틀린 함수가 디폴트 파라미터 값을 제공하더라도 모든 인자를 명시해야 한다.  
+자바에서 코틀린 함수를 자주 호출해야 한다면 자바 쪽에서 좀 더 편하게 코틀린 함수를 호출하고 싶을 것이다.  
+그럴 때 @JvmOverloads 애노테이션을 함수에 추가할 수 있다.  
+@JvmOverloads를 함수에 추가하면 코틀린 컴파일러가 자동으로 맨 마지막 파라미터로부터 파라미터를 하나씩 생략한 오버로딩한 자바 메소드를 추가해준다.  
+예를 들어 joinToString에 @JvmOverloads를 붙이면 다음과 같은 오버로딩한 함수가 만들어진다.  
+
+```kotlin
+/* 자바 */
+String joinToString(Collection<T> collection, String separator, String prefix, String postfix);
+String joinToString(Collection<T> collection, String separator, String prefix);
+String joinToString(Collection<T> collection, String separator);
+String joinToString(Collection<T> collection);
+```
+
+각각의 오버로딩한 함수들은 시그니처에서 생략된 파라미터에 대해 코틀린 함수의 디폴트 파라미터 값을 사용한다.
