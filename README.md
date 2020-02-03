@@ -630,3 +630,79 @@ String joinToString(Collection<T> collection);
 ```
 
 각각의 오버로딩한 함수들은 시그니처에서 생략된 파라미터에 대해 코틀린 함수의 디폴트 파라미터 값을 사용한다.
+
+### - 정적인 유틸리티 클래스 없애기: 최상위 함수와 프로퍼티
+
+join.kt
+
+```kotlin
+package strings
+fun joinToString(...): String { ... }
+```
+
+```java
+/* 자바 */
+package strings;
+public class JoinKt {
+    public static String joinToString(...) { ... }
+}
+```
+
+코틀린 컴파일러가 생성하는 클래스의 이름은 최상위 함수가 들어있던 코틀린 소스 파일의 이름과 대응한다.  
+코틀린 파일의 모든 최상위 함수는 이 클래스의 정적인 메소드가 된다.  
+
+```java
+/* 자바 */
+import strings.JoinKt;
+...
+JoinKt.joinToString(list, ", ", "", "");
+```
+
+- 파일에 대응하는 클래스의 이름 변경하기  
+
+코틀린 최상위 함수가 포함되는 클래스의 이름을 바꾸고 싶다면 파일에 @JvmName 애노테이션을 추가  
+@JvmName 애노테이션은 파일의 맨 앞, 패키지 이름 선언 이전에 위치해야 한다.
+
+```kotlin
+@file:JvmName("StringFunctions")    // 클래스 이름을 지정하는 애노테이션
+package strings
+fun joinToString(...): String { ... }
+```
+
+```java
+/* 자바 */
+import strings.StringFunctions;
+StringFunctions.joinToString(list, ", ", "", "");
+```
+
+#### 최상위 프로퍼티
+
+함수와 마찬가지로 프로퍼티도 파일의 최상위 수준에 놓을 수 있다.  
+
+```kotlin
+var opCount = 0     // 최상위 프로퍼티 선언
+fun performOperation() {
+    opCount++       // 최상위 프로퍼티 값 변경
+}
+
+fun reportOperationCount() {
+    println("Operation performed $opCount times")   // 최상위 프로퍼티 값 읽음
+}
+```
+
+최상위 프로퍼티를 활용해 상수 추가 가능
+
+`val UNIX_LINE_SEPARATOR = "\n"`
+
+기본적으로 최상위 프로퍼티도 다른 모든 프로퍼티처럼 접근자 메소드를 통해 자바 코드에 노출됨  
+(val의 경우 접근자, var의 경우 설정자와 접근자가 생김)  
+겉으로는 상수처럼 보이지만, 실제로는 접근자를 사용해야 한다면 자연스럽지 못함  
+const 변경자를 추가하면 프로퍼티를 public static final 필드로 컴파일하게 만들 수 있음  
+(단, 원시 타입과 String 타입의 프로퍼티만 const로 지정 가능)
+
+`const val UNIX_LINE_SEPARATOR = "\n"`
+
+앞의 코드는 다음 자바 코드와 동등한 바이트코드를 만듬
+
+/* 자바 */  
+`public static final String UNIX_LINE_SEPARATOR = "\n";`
