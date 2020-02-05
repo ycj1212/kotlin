@@ -706,3 +706,38 @@ const 변경자를 추가하면 프로퍼티를 public static final 필드로 �
 
 /* 자바 */  
 `public static final String UNIX_LINE_SEPARATOR = "\n";`
+
+### 메소드를 다른 클래스에 추가: 확장 함수와 확장 프로퍼티
+
+__확장 함수__ 는 어떤 클래스의 멤버 메소드인 것처럼 호출할 수 있지만 그 클래스의 밖에 선언된 함수  
+
+```kotlin
+package strings
+fun String.lastChar(): Char = this.get(this.length - 1)
+```
+
+__수신 객체 타입(receiver type)__: 확장이 정의될 클래스의 타입  
+__수신 객체(receiver object)__: 그 클래스에 속한 인스턴스 객체
+
+`fun String.lastChar(): Char = this.get(this.length - 1)`
+
+- String: 수신 객체 타입  
+- this: 수신 객체  
+
+```kotlin
+>>> println("Kotlin".lastChar())
+n
+// String: 수신 객체 타입
+// "Kotlin": 수신 객체
+```
+
+원하는 메소드를 String 클래스에 추가?
+
+```kotlin
+package strings
+fun String.lastChar(): Char = get(length - 1)
+// this 생략 가능
+```
+
+하지만 확장 함수 안에서 private멤버나 protected멤버를 사용할 수 없다.
+
