@@ -741,3 +741,57 @@ fun String.lastChar(): Char = get(length - 1)
 
 하지만 확장 함수 안에서 private멤버나 protected멤버를 사용할 수 없다.
 
+### - 임포트와 확장 함수
+
+확장 함수를 사용하기 위해서는 그 함수를 임포트하여야 한다.  
+
+```kotlin
+import strings.lastChar
+val c = "Kotlin".lastChar()
+```
+
+*를 사용한 임포트
+
+```kotlin
+import strings.*
+val c = "Kotlin".lastChar()
+```
+
+as 키워드 사용
+
+```kotlin
+import strings.lastChar as last
+val c = "Kotlin".last()
+```
+
+한 파일 안에서 다른 여러 패키지에 속해있는 이름이 같은 함수를 가져와 사용해야하는 경우 이름을 바꿔서 임포트하면 이름 충돌을 막을 수 있다.
+
+### - 자바에서 확장 함수 호출
+
+확장 함수를 StringUtil.kt 파일에 정의했다면 다음과 같이 호출할 수 있다.
+
+```java
+/* 자바 */
+char c = StringUtilKt.lastChar("Java");
+```
+
+### - 확장 함수로 유틸리티 함수 정의
+
+```kotlin
+fun <T> Collection<T>.joinToString(     // Collection<T>에 대한 확장 함수 선언
+    separator: String = ", ",
+    prefix: String = "",
+    postfix: String = ""
+): String {
+    val result = StringBuilder(prefix)
+    for ((index, element) in this.withIndex()) {    // "this"는 수신 객체를 가리킴. 여기서는 T타입의 원소로 이뤄진 컬렉션
+        if (index > 0)  result.append(separator)
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
+}
+>>> val list = listOf(1, 2, 3)
+>>> println(list.joinToString(separator = "; ", prefix = " (", postfix = ") "))
+(1; 2; 3)
+```
