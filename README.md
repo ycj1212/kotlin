@@ -795,3 +795,120 @@ fun <T> Collection<T>.joinToString(     // Collection<T>에 대한 확장 함수
 >>> println(list.joinToString(separator = "; ", prefix = " (", postfix = ") "))
 (1; 2; 3)
 ```
+
+```kotlin
+>>> val list = arrayListOf(1, 2, 3)
+>>> println(list.joinToString(" "))
+1 2 3
+```
+
+확장 함수는 단지 정적 메소드 호출에 대한 문법적인 편의일 뿐이다.  
+문자열의 컬렉션에 대해서만 호출할 수 있는 join함수 정의
+
+```kotlin
+fun Collection<String>.join(
+    separator: String = ", ",
+    prefix: String = "",
+    postfix: String = ""
+) = joinToString(separator, prefix, postfix)
+>>> println(listOf("one", "two", "eight").join(" "))
+one two eight
+
+>>> listOf(1, 2, 8).join()
+Error: Type mismatch: inferred type is List<Int> but Collection<String> was expected.
+```
+
+확장 함수가 정적 메소드와 같은 특징을 가지므로, 확장 함수를 하위 클래스에서 오버라이드할 수는 없다.
+
+### - 확장 함수는 오버라이드할 수 없다
+
+```kotlin
+open class View {
+    open fun click() = println("View clicked")
+}
+
+class Button: View() {  // Button은 View를 확장한다.
+    override fun click() = println("Button clicked")
+}
+```
+
+Button이 View의 하위 타입이기 때문에 View 타입 변수를 선언해도 Button 타입 변수를 그 변수에 대입할 수 있다.  
+View 타입 변수에 대해 click과 같은 일반 메소드를 호출했는데, click을 Button 클래스가 오버라이드했다면 실제로는 Button이 오버라이드한 click이 호출된다.  
+
+> 실행 시점에 객체 타입에 따라 동적으로 호출될 대상 메소드를 결정하는 방식을 동적 디스패치(dynamic dispatch)라고 한다.  
+반면 컴파일 시점에 알려진 변수 타입에 따라 정해진 메소드를 호출하는 방식은 정적 디스패치(static dispatch)라고 부른다.  
+참고로 프로그래밍 언어 용어에서 '정적'이라는 말은 컴파일 시점을 의미하고, '동적'이라는 말은 실행 시점을 의미한다. - 옮긴이
+
+```kotlin
+>>> val view: View = Button()
+>>> view.click()    // "View"에 저장된 값의 실제 타입에 따라 호출할 메소드가 결정된다.
+Button clicked
+```
+
+하지만 확장은 이런 식으로 작동하지 않는다.  
+확장 함수는 클래스의 일부가 아니다.  
+확장 함수는 클래스 밖에 선언된다.  
+확장 함수를 호출할 때 수신 객체로 지정한 변수의 정적 타입에 의해 어떤 확장 함수가 호출될 지 결정되지,  
+그 변수에 저장된 객체의 동적인 타입에 의해 확장 함수가 결정되지 않는다.
+
+```kotlin
+fun View.showOff() = println("I'm a view!")
+fun Button.showOff() = println("I'm a button!")
+>>> >>> val view: View = Button()
+>>> view.showOff()  // 확장 함수는 정적으로 결정된다.
+I'm a view!
+```
+
+```java
+/* 자바 */
+>>> View view = new Button();
+>>> ExtensionsKt.showOff(view); // showOff 함수를 extensions.kt 파일에 정의했다.
+I'm a view!
+```
+
+위 예제와 같이 확장 함수를 오버라이드할 수 없다.  
+코틀린은 호출될 확장 함수를 정적으로 결정하기 때문이다.
+
+📝Note  
+어떤 클래스를 확장한 함수와 그 클래스의 멤버 함수의 이름과 시그니처가 같다면 확장 함수가 아니라 멤버 함수가 호출된다(멤버 함수의 우선순위가 더 높다).  
+
+### - 확장 프로퍼티
+
+확장 프로퍼티를 사용하면 기존 클래스 객체에 대한 프로퍼티 혁식의 구문으로 사용할 수 있는 API를 추가할 수 있다.  
+프로퍼티라는 이름으로 불리기는 하지만 상태를 저장할 적절한 방법이 없기 때문에(기존 클래스의 인스턴스 객체에 필드를 추가할 방법은 없다) 실제로 확장 프로퍼티는 아무 상태도 가질 수 없다.
+
+```kotlin
+val String.lastChar: Char
+    get() = get(length - 1)
+```
+
+뒷받침하는 필드가 없어서 기본 게터 구현을 제공할 수 없으므로 최소한 게터는 꼭 정의해야 한다.  
+마찬가지로 초기화 코드에서 계산한 값을 담을 장소가 전혀 없으므로 초기화 코드도 쓸 수 없다.  
+
+StringBuilder에 같은 프로퍼티를 정의한다면 StringBuilder의 맨 마지막 문자는 변경 가능하므로 프로퍼티를 var로 만들 수 있다.
+
+변경 가능한 확장 프로퍼티 선언
+
+```kotlin
+var StringBuilder.lastChar: Char
+    get() = get(length - 1)     // 프로퍼티 게터
+    set(value: Char) {
+        this.setCharAt(length - 1, value)   // 프로퍼티 세터
+    }
+
+>>> println("Kotlin".lastChar)
+n
+>>> val sb = StringBuilder("Kotlin")
+>>> sb.lastChar = '!'
+>>> println(sb)
+Kotlin!
+```
+
+자바에서 확장 프로퍼티를 사용하고 싶다면 항상 StringUtilKt.getLastChar("Java")처럼 게터나 세터를 명시적으로 호출하여야 한다.
+
+### 컬렉션 처리: 가변 길이 인자, 중위 함수 호출, 라이브러리 지원
+
+- vararg 키워드를 사용하면 호출 시 인자 개수가 달라질 수 있는 함수를 정의할 수 있다.
+- 중위 함수 호출 구문을 사용하면 인자가 하나뿐인 메소드를 간편하게 호출할 수 있다.
+- 구조 분해 선언을 사용하면 복합적인 값을 분해해서 여러 변수에 나눠 담을 수 있다.
+
