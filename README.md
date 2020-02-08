@@ -912,3 +912,52 @@ Kotlin!
 - 중위 함수 호출 구문을 사용하면 인자가 하나뿐인 메소드를 간편하게 호출할 수 있다.
 - 구조 분해 선언을 사용하면 복합적인 값을 분해해서 여러 변수에 나눠 담을 수 있다.
 
+### - 자바 컬렉션 API 확장
+
+```kotlin
+>>> val strings: List<String> = listOf("first", "second", "fourteenth")
+>>> strings.last()
+fourteenth
+>>> val numbers: Collection<Int> = setOf(1, 14, 2)
+>>> numbers.max()
+14
+
+fun <T> List<T>.last(): T { /* 마지막 원소를 반환함 */ }
+fun Collection<Int>.max(): Int { /* 컬렉션의 최댓값을 찾음 */ }
+```
+
+last와 max는 확장 함수!!
+
+### - 가변 인자 함수: 인자의 개수가 달라질 수 있는 함수 정의
+
+리스트를 생성하는 함수를 호출할 때 원하는 만큼 많이 원소를 전달할 수 있다.
+
+`val list = listOf(2, 3, 5, 7, 11)`
+
+라이브러리에서 이 함수의 정의를 보면 다음과 같다.
+
+`fun listOf<T>(vararg values: T): List<T> { ... }`
+
+자바의 가변 길이 인자(varargs)는 메소드를 호출할 때 원하는 개수만큼 값을 인자로 넘기면 자바 컴파일러가 배열에 그 값들을 넣어주는 기능이다.  
+코틀린의 가변 길이 인자도 비슷하지만 문법이 조금 다르다.  
+타입 뒤에 ...을 붙이는 대신 코틀린에서는 파라미터 앞에 vararg 변경자를 붙인다.  
+
+이미 배열에 들어있는 원소를 가변 길이 인자로 넘길 때도 코틀린과 자바 구문이 다르다.  
+자바에서는 배열을 그냥 넘기면 되지만 코틀린에서는 배열을 명시적으로 풀어서 배열의 각 원소가 인자로 전달되게 해야 한다.  
+기술적으로는 스프레드(spread)연산자가 그런 작업을 해준다.  
+하지만 실제로는 전달하려는 배열 앞에 *를 붙이기만 하면 된다.
+
+```kotlin
+fun main(args: Array<String>) {
+    val list = listOf("args: ", *args)  // 스프레드 연산자가 배열의 내용을 펼쳐준다.
+    println(list)
+}
+```
+
+### - 값의 쌍 다루기: 중위 호출과 구조 분해 선언
+
+맵을 만들려면 mapOf 함수를 사용한다.
+
+`val map = mapOf(1 to "one", 7 to "seven", 53 to "fifty-three")`
+
+중위 호출(infix call)로 to라는 일반 메소드를 호출한 것이다.
