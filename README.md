@@ -1047,3 +1047,41 @@ split의 구분 문자열을 실제로는 정규식(regular expression)이기 �
 
 ### - 정규식과 3중 따옴표로 묶은 문자열
 
+String 확장 함수를 사용해 경로 파싱하기
+
+```kotlin
+fun parsePath(path: String) {
+    val directory = path.substringBeforeLast("/")
+    val fullName = path.substringAfterLast("/")
+    val fileName = fullName.substringBeforeLast(".")
+    val extension = fullName.substringAfterLast(".")
+    println("Dir: $directory, name: $fileName, ext: $extension")
+}
+>>> parsePath("/Users/yole/kotlin-book/chapter.adoc")
+Dir: /Users/yole/kotlin-book, name: chapter, ext: adoc
+```
+
+경로 파싱에 정규식 사용하기
+
+```kotlin
+fun parsePath(path: String) {
+    val regex = """(.+)/(.+)\.(.+)""".toRegex()
+    val matchResult = regex.matchEntire(path)
+    if(matchResult != null) {
+        val (directory, filename, extension) = matchResult.destructured
+        println("Dir: $directory, name: $filename, ext: $extension")
+    }
+}
+```
+
+3중 따옴표 문자열을 사용해 정규식을 썼다.  
+3중 따옴표 문자열에서는 역슬래시(\\)를 포함한 어떤 문자도 이스케이프할 필요가 없다.  
+예를 들어 일반 문자열을 사용해 정규식을 작성하는 경우 마침표 기호를 이스케이프하려면 \\\\.라고 써야 하지만, 3중 따옴표 문자열에서는 \\.라고 쓰면 된다.  
+패턴 .은 임의의 문자와 매치될 수 있다.  
+따라서 첫 번째 그룹인 (.+)는 마지막 슬래시까지 모든 문자와 매치된다.  
+이 부분 문자열에는 마지막 슬래시를 제외한 모든 슬래시도 들어간다.  
+두 번째 그룹에도 마지막 전까지 모든 문자가 들어간다.  
+세 번째 그룹에는 나머지 모든 문자가 들어간다.  
+
+### - 여러 줄 3중 따옴표 문자열
+
