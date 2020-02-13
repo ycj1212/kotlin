@@ -1181,8 +1181,48 @@ validate(user, user.address, "Address")
 ```kotlin
 class User(val id: Int, val name: String, val address: String)
 fun saveUser(user: User) {
-    fun validate(value: String, fieldName: String) {
-        
+    fun validate(value: String, fieldName: String) {    // 이제 saveUser 함수의 user 파라미터를 중복 사용하지 않는다.
+        if(value.isEmpty()) {
+            throw IllegalArgumentException(
+                "Can't save user ${user.id}: " +    // 바깥 함수의 파라미터에 직접 접근 가능
+                    "empty $fieldName")
+        }
     }
+    validate(user.name, "Name")
+    validate(user.address, "Address")
 }
 ```
+
+더 개선하여 검증 로직을 User 클래스를 확장한 함수로 만들 수도 있다.
+
+```kotlin
+class User(val id: Int, val name: String, val address: String)
+fun User.validateBeforeSave() {
+    fun validate(value: String, fieldName: String) {
+        if(value.isEmpty()) {
+            throw IllegalArgumentException(
+                "Can't save user $id: empty $fieldName")    // User의 프로퍼티를 직접 사용할 수 있다.
+        }
+    }
+    validate(name, "Name")
+    validate(address, "Address")
+}
+fun saveUser(user: User) {
+    user.validateBeforeSave()   // 확장 함수 호출
+}
+```
+
+### 요약
+
+- 코틀린은 자체 컬렉션 클래스를 정의하지 않지만 자바 클래스를 확장해서 더 풍부한 API를 제공한다.
+- 함수 파라미터의 디폴트 값을 정의하면 오버로딩한 함수를 정의할 필요성이 줄어든다. 이름붙인 인자를 사용하면 함수의 인자가 많을 때 함수 호출의 가독성을 더 향상시킬 수 있다.
+- 코틀린 파일에서 클래스 멤버가 아닌 최상위 함수와 프로퍼티를 직접 선언할 수 있다. 이를 활용하면 코드 구조를 더 유연하게 만들 수 있다.
+- 확장 함수와 프로퍼티를 사용하면 외부 라이브러리에 정의된 클래스를 포함해 모든 클래스의 API를 그 클래스의 소스코드를 바꿀 필요 없이 확장할 수 있다. 확장 함수를 사용해도 실행 시점에 부가 비용이 들지 않는다.
+- 중위 호출을 통해 인자가 하나 밖에 없는 메소드나 확장 함수를 더 깔끔한 구문으로 호출할 수 있다.
+- 코틀린은 정규식과 일반 문자열을 처리할 때 유용한 다양한 문자열 처리 함수를 제공한다.
+- 자바 문자열로 표현하려면 수많은 이스케이프가 필요한 문자열의 경우 3중 따옴표 문자열을 사용하면 더 깔끔하게 표현할 수 있다.
+- 로컬 함수를 써서 코드를 더 깔끔하게 유지하면서 중복을 제거할 수 있다.
+
+## 4. 클래스, 객체, 인터페이스
+
+### 
