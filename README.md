@@ -1428,3 +1428,109 @@ TalkativeButton 클래스의 가시성을 public으로 바꿔야 한다.
 internal로 사용하는 이유 첫 번째는 한 모듈에 속한 어떤 클래스를 모듈 밖에서 상속한 경우 그 하위 클래스 내부의 메소드 이름이 우연히 상위 클래스의 internal 메소드와 같아져서 내부 메소드를 오버라이드하는 경우를 방지하기 위함이고, 두 번째는 실수로 internal 클래스를 모듈 외부에서 사용하는 일을 막기 위함이다.
 
 ### - 내부 클래스와 중첩된 클래스: 기본적으로 중첩 클래스
+
+- 중첩 클래스: 바깥쪽 클래스 인스턴스에 대한 접근 권한이 없다. 즉 바깥쪽 클래스에 대한 참조를 저장하지 않는다.
+
+Default
+- 자바: 내부 클래스
+- 코틀린: 중첩 클래스
+
+```kotlin
+interface State: Serializable
+
+interface View {
+    fun getCurrentState(): State
+    fun restoreState(state: State) {}
+}
+```
+
+```java
+/* 자바 */
+public class Button implements View {
+    @Override
+    public state getCurrentState() {
+        return new ButtonState();
+    }
+
+    @Override
+    public void restoreState(State state) { /*...*/ }
+
+    public class ButtonState implements State { /*...*/ }
+}
+```
+
+```kotlin
+class Button : View {
+    override fun getCurrentState(): State = ButtonState()
+    override fun restoreState(state: State) { /*...*/ }
+    class ButtonState : State { /*...*/ }
+}
+```
+
+클래스 B 안에 정의된 클래스 A | 자바에서는 | 코틀린에서는
+-|-|-
+중첩 클래스(바깥쪽 클래스에 대한 참조를 저장하지 않음) | static class A | class A
+내부 클래스(바깥쪽 클래스에 대한 참조를 저장함) | class A | inner class A
+
+![](./figure_4-1.png)
+
+```kotlin
+class Outer {
+    inner class Inner {
+        fun getOuterReference(): Outer = this@Outer
+    }
+}
+```
+
+### - 봉인된 클래스: 클래스 계층 정의 시 계층 확장 제한
+
+```kotlin
+interface Expr
+class Num(val value: Int) : Expr
+class Sum(val left: Expr, val right: Expr) : Expr
+
+fun eval(e: Expr): Int =
+    when (e) {
+        is Num -> e.value
+        is Sum -> eval(e.left) + eval(e.right)
+        else -> // "else" 분기가 꼭 있어야 한다.
+            throw IllegalArgumentException("Unknown expression")
+    }
+```
+
+상위 클래스에 sealed 변경자를 붙이면 그 상위 클래스를 상속한 하위 클래스 정의를 제한할 수 있다.  
+sealed 클래스의 하위 클래스를 정의할 때는 반드시 상위 클래스 안에 중첩시켜야 한다.
+
+```kotlin
+sealed class Expr { // 기반 클래스를 sealed로 봉인한다.
+    // 기반 클래스의 모든 하위 클래스를 중첩 클래스로 나열한다.
+    class Num(val value: Int) : Expr()
+    class Sum(val left: Expr, val right: Expr) : Expr()
+}
+
+fun eval(e: Expr): Int =
+    when (e) {  // "when" 식이 모든 하위 클래스를 검사하므로 별도의 "else" 분기가 없어도 된다.
+        is Expr.Num -> e.value
+        is Expr.Sum -> eval(e.right) + eval(e.left)
+    }
+```
+
+![](./04fig02_alt.jpg)
+
+봉인된 클래스는 클래스 외부에 자신을 상속한 클래스를 둘 수 없다.
+
+내부적으로 Expr 클래스는 private 생성자를 가진다.  
+그 생성자는 클래스 내부에서만 호출할 수 있다.  
+sealed 인터페이스를 정의할 수는 없다.  
+봉인된 인터페이스를 만들 수 있다면 그 인터페이스를 자바 쪽에서 구현하지 못하게 막을 수 있는 수단이 코틀린 컴파일러에게 없기 때문이다.
+
+📝Note  
+> 코틀린 1.0에서 sealed는 너무 제약이 심하다.  
+예를 들어 모든 하위 클래스는 중첩 클래스여야 하고, 데이터 클래스로 sealed 클래스를 상속할 수도 없다.  
+코틀린 1.1부터는 이 제한이 완화됐다.  
+봉인된 클래스와 같은 파일의 아무데서나 봉인된 클래스를 상속한 하위 클래스를 만들 수 있고, 데이터 클래스로 하위 클래스를 정의할 수도 있다.
+
+`class Num(val value: Int) : Expr()`
+
+### 뻔하지 않은 생성자와 프로퍼티를 갖는 클래스 선언
+
