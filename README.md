@@ -146,7 +146,211 @@ if (value is String)
 코틀린 컴파일러로 컴파일한 코드는 코틀린 런타임 라이브러리에 의존한다.  
 런타임 라이브러리에는 코틀린 자체 표준 라이브러리 클래스와 코틀린에서 자바 API의 기능을 확장한 내용이 들어있다.  
 
-### - enum 
+# 코틀린 기초
+
+## 기본 요소: 함수와 변수
+
+### - Hello, World!
+
+```kotlin
+fun main(args: Array<String>) {
+    println("Hello, world!")
+}
+```
+
+- 함수 선언 시 fun 키워드 사용
+- 파라미터 이름 뒤에 타입을 쓴다.
+- 함수를 최상위 수준에 정의 가능(꼭 클래스 안에 정의할 필요X)
+- 세미콜론(;)은 옵션
+
+### - 함수
+
+![코틀린 함수 정의](02fig01.jpg)
+
+위 그림은 코틀린 함수의 기본 구조를 보여준다.  
+코틀린에서 if는 문장이 아니고 결과를 만드는 식이다.  
+자바 3항 연산자 (a > b) ? a : b 식과 비슷하다.
+문(statement)과 식(expression)의 차이는 값을 만들어내지 못하는 것과 만들어내는 것의 차이
+
+- 블록이 본문인 함수
+
+```kotlin
+fun max(a: Int, b: Int): Int {
+    return if (a > b) a else b
+}
+```
+
+- 식이 본문인 함수
+
+```kotlin
+fun max(a: Int, b: Int): Int = if (a > b) a else b
+```
+
+```kotlin
+// 타입 추론
+fun max(a: Int, b: Int) = if (a > b) a else b
+```
+
+### - 변수
+
+초기화 식을 사용하지 않고 변수를 선언하려면 변수 타입을 반드시 명시해야 한다.
+
+```kotlin
+val answer: Int
+answer = 42
+```
+
+> #### 변경 가능한 변수와 변경 불가능한 변수
+
+- val - 변경 불가능한 참조를 저장하는 변수다. 자바에서 final 변수에 해당
+- var - 변경 가능한 참조다. 자바에서 일반 변수에 해당
+
+```kotlin
+var a = 3
+val b = 3
+a = 4
+b = 4       // 컴파일 오류
+a = "no a"  // "Error: type mismatch" 컴파일 오류 발생
+```
+
+### - 더 쉽게 문자열 형식 지정: 문자열 템플릿
+
+```kotlin
+fun main(args: Array<String>) {
+    val name = if (args.size > 0) args[0] else "Kotlin"
+}
+```
+
+변수 앞에 $를 추가해 변수를 문자열 안에 사용 가능  
+자바에서 ("Hello, " + name + "!")과 같지만 더 간결하고 효율적
+
+간단한 변수 이름만으로 한정되지 않고, 복잡한 식도 중괄호로 둘러싸서 사용 가능
+
+```kotlin
+fun main(args: Array<String>) {
+    if (args.size > 0) {
+        println("Hello, ${args[0]}!")
+    }
+}
+```
+
+```kotlin
+fun main(args: Array<String>) {
+    println("Hello, ${if (args.size > 0) args[0] else "someone"}!")
+}
+```
+
+## 클래스와 프로퍼티
+
+```java
+/* 자바 */
+public class Person {
+    private final String name;
+    public Person(String name) {
+        this.name = name;
+    }
+    public String getName() {
+        return name;
+    }
+}
+```
+
+```kotlin
+class Person(val name: String)
+```
+
+### - 프로퍼티
+
+자바에서는 필드와 접근자를 하나로 프로퍼티라고 부른다. 코틀린은 프로퍼티를 언어 기본 기능으로 제공하며, 코틀린 프로퍼티는 자바의 필드와 접근자 메소드를 완전히 대신한다.  
+
+```kotlin
+class Person(
+    val name: String,
+    var isMarried: Boolean
+)
+```
+
+`val name: String`은 읽기 전용 프로퍼티로, 코틀린은 (비공개) 필드와 필드를 읽는 단순한 (공개) 게터를 만들어낸다.
+
+`var isMarried: Boolean`은 쓸 수 있는 프로퍼티로, 코틀린은 (비공개) 필드, (공개) 게터, (공개) 세터를 만들어낸다.
+
+- 자바에서 Person 클래스를 사용하는 방법
+
+```java
+/* 자바 */
+Person person = new Person("Bob", true);
+person.setMarried(false);
+System.out.println(person.getName());
+System.out.println(person.isMarried());
+```
+
+- 코틀린에서 Person 클래스를 사용하는 방법 
+
+```kotlin
+val person = Person("Bob", true)
+person.isMarried = false
+println(person.name)
+println(person.isMarried)
+```
+
+코틀린에서는 생성자 호출 시 new 키워드를 사용하지 않는다.  
+프로퍼티 이름을 직접 사용해도 코틀린이 자동으로 게터를 호출해준다.
+
+### - 커스텀 접근자
+
+```kotlin
+class Rectangle(val height: Int, val width: Int) {
+    val isSquare: Boolean
+        get() { // 프로퍼티 게터 선언
+            return height == width
+        }
+}
+```
+
+```kotlin
+class Rectangle(val height: Int, val width: Int) {
+    val isSquare: Boolean
+        get() = height == width // 이렇게 표현 가능
+}
+```
+
+### - 코틀린 소스코드 구조: 디렉터리와 패키지
+
+같은 패키지에 속해 있다면 다른 파일에서 정의한 선언일지라도 직접 사용할 수 있다.  
+반면 다른 패키지에 정의한 선언을 사용하려면 임포트를 통해 선언을 불러와야 한다.
+
+```kotlin
+package geometry.shapes  // 패키지 선언
+import java.util.Random // 표준 자바 라이브러리 클래스 임포트
+class Rectangle(val height: Int, val width: Int) {
+    val isSquare: Boolean
+        get() = height == width
+}
+fun createRandomRectangle(): Rectangle {
+    val random = Random()
+    return Rectangle(random.nextInt(), random.nextInt())
+}
+```
+
+코틀린에서는 클래스 임포트와 함수 임포트에 차이가 없으며, 모든 선언을 import 키워드로 가져올 수 있다.
+
+```kotlin
+package geometry.example
+import geometry.shapes.createRandomRectangle // 이름으로 함수 임포트하기
+fun main() {
+    println(createRandomRectangle().isSquare)   // "true"가 아주 드물게 출력된다.
+}
+```
+
+자바에서는 패키지의 구조와 일치하는 디렉터리 계층 구조를 만들고 클래스의 소스코드를 그 클래스가 속한 패키지와 같은 디렉터리에 위치시켜야 한다.
+
+![자바 디렉터리 구조](02fig02.jpg)
+
+코틀린에서는 여러 클래스를 한 파일에 넣을 수 있고, 파일의 이름도 마음대로 정할 수 있다.
+
+![코틀린 디렉터리 구조](02fig03.jpg)
+
+### - enum
 
 ```kotlin
 enum class Color {
