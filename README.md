@@ -350,6 +350,8 @@ fun main() {
 
 ![코틀린 디렉터리 구조](02fig03.jpg)
 
+## 선택과 표현의 처리: enum과 when
+
 ### - enum
 
 ```kotlin
@@ -357,6 +359,15 @@ enum class Color {
     RED, ORANGE, YELLOW, GREEN, BLUE, INDIGO, VIOLET
 }
 ```
+
+코틀린에서는 enum class를 사용하지만 자바에서는 enum을 사용한다.  
+코틀린에서 enum은 소프트 키워드(soft keyword)라 부르는 존재다.  
+enum은 class 앞에 있을 떄는 특별한 의미를 지니지만 다른 곳에서는 이름에 사용할 수 있다.  
+반면 class는 키워드이다.  
+따라서 class라는 이름을 사용할 수 없으므로 클래스를 표현하는 변수 등을 정의할 때는 clazz나 aClass와 같은 이름을 사용해야 한다.  
+
+자바와 마찬가지로 enum은 단순히 값만 열거하는 존재가 아니다.  
+enum 클래스 안에도 프로퍼티나 메소드를 정의할 수 있다.  
 
 - 프로퍼티나 메소드 정의 가능
 
@@ -373,6 +384,11 @@ enum class Color (
 
 >>> println(Color.BLUE.rgb())
 ```
+
+enum에도 일반적인 클래스와 마찬가지로 생성자와 프로퍼티를 선언한다.  
+각 enum 상수를 정의할 떄는 그 상수에 해당하는 프로퍼티 값을 지정해야만 한다.  
+이 예제에서는 코틀린에서 유일하게 세미콜론(;)이 필수인 부분을 볼 수 있다.  
+enum 클래스 안에 메소드를 정의하는 경우 반드시 enum 상수 목록과 메소드 정의 사이에 세미콜론을 넣어야 한다.
 
 ### - when
 
@@ -417,6 +433,9 @@ fun getWarmth(color: Color) = when(color) {
 }
 ```
 
+분기 조건에 상수(enum 상수나 숫자 리터럴)만을 사용할 수 있는 자바 switch와는 달리  
+코틀린 when의 분기 조건은 임의의 객체를 허용한다.  
+
 ```kotlin
 fun mix(c1: Color, c2: Color) =
     /**
@@ -453,7 +472,7 @@ fun mixOptimized(c1: Color, c2: Color) =
 
 - when에 인자가 없으려면 각 분기의 조건이 불리언 결과를 계산하는 식이어야 함
 
-### 스마트 캐스트: 타입 검사와 타입 캐스트를 조합
+### - 스마트 캐스트: 타입 검사와 타입 캐스트를 조합
 
 ```kotlin
 interface Expr
@@ -461,34 +480,27 @@ class Num(val value: Int): Expr
 class Sum(val left: Expr, val right: Expr): Expr
 ```
 
-(1 + 2) + 4
-
+(1 + 2) + 4  
 eval(Sum(Num(1), Num(2)), Num(4))
 
 ```kotlin
 fun eval(e: Expr): Int {
-    if (e is Num) {
-        // 컴파일러는 e를 Num으로 해석
-        val n = e as Num
+    if (e is Num) { // 컴파일러는 e를 Num으로 해석
+        val n = e as Num    // as는 명시적 타입 캐스팅
         return n.value
     }
-    if (e is Sum) {
-        // 컴파일러는 e를 Sum으로 해석
+    if (e is Sum) { // 컴파일러는 e를 Sum으로 해석
         return eval(e.right) + eval(e.left)
     }
     throw IllegalArgumentException("Unknown expression")
 }
 ```
 
-- is는 변수 타입을 검사
+- is는 변수 타입을 검사 후 캐스팅
 - 자바의 instanceof와 비슷하지만 명시적 캐스팅이 필요 없음
 - 프로퍼티는 반드시 val이어야 함
 
-- 명시적 캐스팅
-
-`val n = e as Num`
-
-### 리팩토링: if를 when으로 변경
+### - 리팩토링: if를 when으로 변경
 
 ```kotlin
 fun eval(e: Expr): Int =
@@ -515,6 +527,8 @@ fun eval(e: Expr): Int =
     }
 ```
 
+### - if와 when 분기에서 블록 사용
+
 - 블록의 마지막 문장이 블록 전체의 결과
 
 ```kotlin
@@ -536,9 +550,15 @@ fun evalWithLogging(e: Expr): Int =
 >>> println(evalWithLogging(Sum(Sum(Num(1), Num(2)), Num(4))))
 ```
 
-### 반목문
+'블록의 마지막 식이 블록의 결과'라는 규칙은 블록이 값을 만들어내야 하는 경우 항상 성립한다.  
+나중에 try, catch, 람다식에서 이 규칙이 어떻게 쓰이는지 설명한다.  
+하지만 이 규칙은 함수에 대해서는 성립하지 않는다.  
+식이 본문인 함수는 블록을 본문으로 가질 수 없고  
+블록이 본문인 함수는 내부에 return문이 반드시 있어야 한다.  
 
-- while
+## 대상을 이터레이션: while과 for 루프
+
+### - while
 
 ```kotlin
 while (조건) {
@@ -550,12 +570,14 @@ do {
 } while (조건)
 ```
 
-- for
+### - for
+
+코틀린에서는 for문에서 초기값, 증가값, 최종값을 대신하여 범위(range)를 사용한다.
 
 ..연산자
 : 시작 값과 끝 값 범위의 값
 
-`val oneToTen = 1..10`
+- `val oneToTen = 1..10`
 
 ```kotlin
 fun fizzBuzz(i: Int) = when {
@@ -566,43 +588,48 @@ fun fizzBuzz(i: Int) = when {
 }
 
 >>> for (i in 1..100) {
-    ... print(fizzBuzz(i))
-    ... }
+...     print(fizzBuzz(i))
+... }
 1 2 Fizz 4 Buzz Fizz 7 ...
 
 >>> for (i in 100 downTo 1 step 2) {
-    ... print(fizzBuzz(i))
-    ... }
+...     print(fizzBuzz(i))
+... }
 Buzz 98 Fizz 94 92 FizzBuzz 88 ... 
 ```
 
-for (x in 0 until size) == for (x in 0..size-1)
+- `100 downTo 1`: 역방향 수열  
+- `step 2`: 증가값 2  
+- `100 downTo 1 step 2`: 역방향 수열, -2씩 증가  
+- `for (x in 0 until size)` == `for (x in 0..size-1)`  
 
-- map
+키워드: `..`, `downTo`, `step`, `until`
+
+### - 맵에 대한 이터레이션
 
 ```kotlin
 val binaryReps = TreeMap<Char, String>()    // 키를 정렬하기 위해 TreeMap을 사용
 
-for (c in 'A'..'F') {
-    val binary = Integer.toBinaryString(c.toInt())
+for (c in 'A'..'F') {   // 'A'부터 'F'까지 반복
+    val binary = Integer.toBinaryString(c.toInt())  // 아스키 코드를 2진 표현으로 바꾼다.
     binaryReps[c] = binary
 }
 
-for ((letter, binary) in binaryReps) {
+for ((letter, binary) in binaryReps) {  // 맵에 대한 이터레이션
     println("$letter = $binary")
 }
 ```
 
-binaryReps[c] = binary == binaryReps.put(c, binary)
+- `binaryReps[c] = binary` == `binaryReps.put(c, binary)`
 
 ```kotlin
 val list = arrayListOf("10", "11", "1001")
-for((index, element) in list.withIndex()) {
+for((index, element) in list.withIndex()) { // 인덱스와 함께 컬렉션을 이터레이션
     println("$index: $element")
 }
 ```
 
-- 원소 검사
+### - in으로 컬렉션이나 범위의 원소 검사
 
 ```kotlin
 fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
@@ -614,7 +641,7 @@ true
 true
 ```
 
-`c in 'a'..'z'  // 'a' <= c && c <= 'z'`
+- `c in 'a'..'z'` ==  `'a' <= c && c <= 'z'`
 
 ```kotlin
 for recognize(c: Char) = when (c) {
