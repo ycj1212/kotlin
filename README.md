@@ -660,7 +660,7 @@ true
 false
 ```
 
-### 예외 처리
+## 예외 처리
 
 ```kotlin
 if (percentage !in 0..100) {
@@ -668,6 +668,9 @@ if (percentage !in 0..100) {
         "A percentage value must be between 0 and 100: $percentage")
 }
 ```
+
+다른 클래스와 마찬가지로 예외 인스턴스를 만들 때도 new를 붙일 필요가 없다.  
+자바와 달리 코틀린의 throw는 식이므로 다른 식에 포함될 수 있다.
 
 ```kotlin
 val percentage =
@@ -678,15 +681,19 @@ val percentage =
             "A percentage value must be between 0 and 100: $percentage")
 ```
 
-- try, catch, finally
+이 예제에서는  
+조건이 참이면 프로그램이 정상 동작해서 percentage변수가 number의 값으로 초기화된다.  
+조건이 거짓이면 변수가 초기화되지 않는다.
+
+### - try, catch, finally
 
 ```kotlin
-fun readNumber(reader: BufferedReader): Int? {
+fun readNumber(reader: BufferedReader): Int? {  // 함수가 던질 수 있는 예외를 명시할 필요가 없다.
     try {
         val line = reader.readLine()
         return Integer.parseInt(line)
     }
-    catch (e: NumberFormatException) {
+    catch (e: NumberFormatException) {  // 예외 타입을 :의 오른쪽에 쓴다.
         return null
     }
     finally {
@@ -699,9 +706,25 @@ fun readNumber(reader: BufferedReader): Int? {
 239
 ```
 
-자바에서는 명시적으로 체크 예외 처리, 코틀린에서는 구별X
+자바 코드와의 가장 큰 차이는 throws 절이 코드에 없다.  
+자바에서는 함수를 작성할 때 함수 선언 뒤에 throws IOException을 붙여야 한다.  
+이유는 IOException이 체크 예외(checked exception)이기 때문이다.  
+자바에서는 체크 예외를 명시적으로 처리해야 한다.  
+어떤 함수가 던질 가능성이 있는 예외나 그 함수가 호출한 다른 함수에서 발생할 수 있는 예외를 모두 catch로 처리해야 하며, 처리하지 않은 예외는 throws 절에 명시해야 한다.
 
-- try를 식으로 사용
+코틀린은 체크 예외와 언체크 예외를 구별하지 않는다.  
+코틀린에서는 함수가 던지는 예외를 지정하지 않고 발생한 예외를 잡아내도 되고 잡아내지 않아도 된다.  
+실제 자바 프로그래머들이 체크 예외를 사용하는 방식을 고려해 이렇게 코틀린 예외를 설계했다.
+
+위의 예에서 NumberFormatException은 체크 예외가 아니다.  
+따라서 자바 컴파일러는 NumberFormatException을 잡아내게 강제하지 않는다.  
+그에 따라 실제 실행 시점에 NumberFormatException이 발생하는 모습을 자주 볼 수 있다.  
+하지만 입력 값이 잘못되는 경우는 흔히 있는 일이므로 그런 문제가 발생한 경우 부드럽게 다음 단계로 넘어가도록 프로그램을 설계해야 한다는 점에서 이는 불행한 일이다.  
+동시에 BufferedReader.class는 IOException을 던질 수 있는데, 그 예외는 체크 예외이르모 자바에서는 반드시 처리해야 한다.  
+하지만 실제 스트림을 닫다가 실패하는 경우 특별히 스트림을 사용하는 클라이언트 프로그램이 취할 수 있는 의미 있는 동작은 없다.  
+그러므로 이 IOException을 잡아내는 코드는 그냥 불필요하다.  
+
+### - try를 식으로 사용
 
 ```kotlin
 fun readNumber(reader: BufferedReader) {
@@ -734,7 +757,7 @@ fun readNumber(reader: BufferedReader) {
 null
 ```
 
-## 3. 함수 정의와 호출
+## 함수 정의와 호출
 
 ### 컬렉션 만들기
 
@@ -1626,7 +1649,7 @@ abstract class Animated {
 -|-|-
 final | 오버라이드할 수 없음 | 클래스 멤버의 기본 변경자다.
 open | 오버라이드할 수 있음 | 반드시 open을 명시해야 오버라이드할 수 있다.
-abstract | 반드시 오버라이드해야 함 | 추상 클래스의 멤버에만 이 변경자를 붙일 수 있다. 추상 멤버에는 구현이 있으면 안된다.
+abstract | 반드시 오버라이드해야 함 | 추상 클래스의 멤버��만 이 변경자를 붙일 수 있다. 추상 멤버에는 구현이 있으면 안된다.
 override | 상위 클래스나 상위 인스턴스의 멤버를 오버라이드하는 중 | 오버라이드하는 멤버는 기본적으로 열려있다. 하위 클래스의 오버라이드를 금지하려면 final을 명시해야 한다.
 
 ### - 가시성 변경자: 기본적으로 공개
