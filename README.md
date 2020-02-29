@@ -8,6 +8,8 @@
 
 🔗 <https://www.acornpub.co.kr/book/kotlin-in-action>
 
+---
+
 # 코틀린은 무엇인가? 
 
 코틀린은 JVM, Android, JavaScript and Native를 대상으로 JetBrains에서 개발한 OSS 정적 타입 프로그래밍 언어다.  
@@ -145,6 +147,8 @@ if (value is String)
 
 코틀린 컴파일러로 컴파일한 코드는 코틀린 런타임 라이브러리에 의존한다.  
 런타임 라이브러리에는 코틀린 자체 표준 라이브러리 클래스와 코틀린에서 자바 API의 기능을 확장한 내용이 들어있다.  
+
+---
 
 # 코틀린 기초
 
@@ -757,16 +761,17 @@ fun readNumber(reader: BufferedReader) {
 null
 ```
 
-## 함수 정의와 호출
+---
 
-### 컬렉션 만들기
+# 함수 정의와 호출
 
-`val set = hashSetOf(1, 7, 53)`
+## 컬렉션 만들기
 
+`val set = hashSetOf(1, 7, 53)`  
 `val list = arrayListOf(1, 7, 53)`   
 `val map = hashMapOf(1 to "one", 7 to "seven", 53 to "fifty-three")`
 
-to는 키워드가 아니라 일반 함수
+`to`는 키워드가 아니라 일반 함수
 
 ```kotlin
 // 자바: getClass()
@@ -778,7 +783,7 @@ class java.util.ArrayList
 class java.util.HashMap
 ```
 
-기존 자바 컬렉션을 활용
+표준 자바 컬렉션을 활용하여 자바 코드와 상호작용이 훨씬 더 쉽다.
 
 ```kotlin
 >>> val strings = listOf("first", "second", "fourteenth")
@@ -789,7 +794,7 @@ fourteenth
 14
 ```
 
-### 함수 호출을 쉽게 만들기
+## 함수 호출을 쉽게 만들기
 
 ```kotlin
 >>> val list = listOf(1, 2, 3)
@@ -797,7 +802,9 @@ fourteenth
 [1, 2, 3]
 ```
 
-자바 컬렉션에는 디폴트 toString 구현이 들어있다(출력 형식 고정..)
+자바 컬렉션에는 디폴트 toString 구현이 들어있다(출력 형식 고정..)  
+디폴트 구현과 달리 (1; 2; 3)처럼 다르게 표현하고 싶다면??  
+코틀린에는 이런 요구 사항을 처리할 수 있는 함수가 표준 라이브러리에 들어있다.
 
 joinToString 함수는 컬렉션의 원소를 StringBuilder의 뒤에 덧붙인다.  
 이때 원소 사이에 구분자를 추가하고, StringBuilder의 맨 앞과 맨 뒤에는 접두사와 접미사를 추가한다.
@@ -817,9 +824,7 @@ fun <T> joinToString (
     result.append(postfix)
     return result.toString()
 }
-```
 
-```kotlin
 >>> val list = listOf(1, 2, 3)
 >>> println(joinToString(list, "; ", "(", ")"))
 (1; 2; 3)
@@ -827,9 +832,8 @@ fun <T> joinToString (
 
 ### - 이름 붙인 인자
 
-함수 호출 부분의 __가독성__ 해결
-
-함수의 인자들이 어떤 역할을 하는지 구분X...
+함수 호출 부분의 __가독성__ 해결  
+함수의 인자들이 어떤 역할을 하는지 구분X
 
 ```java
 /* 자바 */
@@ -844,8 +848,8 @@ joinToString(collection, separator = " ", prefix = " ", postfix = ".")
 함수 호출 시 함수에 전달하는 인자 중 일부(또는 전부)의 이름을 명시할 수 있다.  
 하나라도 명시하고 나면 혼동을 막기 위해 그 뒤에 오는 모든 인자는 이름을 꼭 명시하여야 한다.
 
-⚠️경고  
-: 자바로 작성한 코드를 호출할 때는 이름 붙인 인자를 사용할 수 없다.  
+> #### ⚠️경고 
+> 자바로 작성한 코드를 호출할 때는 이름 붙인 인자를 사용할 수 없다.  
 따라서 안드로이드 프레임워크나 JDK가 제공하는 함수를 호출할 때도 마찬가지로 이름 붙인 인자를 쓸 수 없다.  
 클래스 파일(.class 파일)에 함수 파라미터 정보를 넣는 것은 자바 8이후 추가된 선택적 특징인데,  
 코틀린은 JDK 6와 호환된다.  
@@ -883,25 +887,24 @@ fun <T> joinToString (
 
 함수의 디폴트 파라미터 값은 함수를 호출하는 쪽이 아니라 함수 선언 쪽에서 지정된다.  
 
-디폴트 값과 자바
-
-자바에서는 디폴트 파라미터 값이라는 개념이 없어서 코틀린 함수를 자바에서 호출하는 경우에는 그 코틀린 함수가 디폴트 파라미터 값을 제공하더라도 모든 인자를 명시해야 한다.  
+> #### 디폴트 값과 자바  
+> 자바에서는 디폴트 파라미터 값이라는 개념이 없어서 코틀린 함수를 자바에서 호출하는 경우에는 그 코틀린 함수가 디폴트 파라미터 값을 제공하더라도 모든 인자를 명시해야 한다.  
 자바에서 코틀린 함수를 자주 호출해야 한다면 자바 쪽에서 좀 더 편하게 코틀린 함수를 호출하고 싶을 것이다.  
 그럴 때 @JvmOverloads 애노테이션을 함수에 추가할 수 있다.  
 @JvmOverloads를 함수에 추가하면 코틀린 컴파일러가 자동으로 맨 마지막 파라미터로부터 파라미터를 하나씩 생략한 오버로딩한 자바 메소드를 추가해준다.  
 예를 들어 joinToString에 @JvmOverloads를 붙이면 다음과 같은 오버로딩한 함수가 만들어진다.  
-
-```kotlin
-/* 자바 */
-String joinToString(Collection<T> collection, String separator, String prefix, String postfix);
-String joinToString(Collection<T> collection, String separator, String prefix);
-String joinToString(Collection<T> collection, String separator);
-String joinToString(Collection<T> collection);
-```
-
-각각의 오버로딩한 함수들은 시그니처에서 생략된 파라미터에 대해 코틀린 함수의 디폴트 파라미터 값을 사용한다.
+> ```kotlin
+> /* 자바 */
+> String joinToString(Collection<T> collection, String separator, String prefix, String postfix);
+> String joinToString(Collection<T> collection, String separator, String prefix);
+> String joinToString(Collection<T> collection, String separator);
+> String joinToString(Collection<T> collection);
+> ```
+> 각각의 오버로딩한 함수들은 시그니처에서 생략된 파라미터에 대해 코틀린 함수의 디폴트 파라미터 값을 사용한다.
 
 ### - 정적인 유틸리티 클래스 없애기: 최상위 함수와 프로퍼티
+
+자바에서는 모든 코드를 클래스 안에 메소드로 작성하여야한다.
 
 join.kt
 
@@ -920,6 +923,7 @@ public class JoinKt {
 
 코틀린 컴파일러가 생성하는 클래스의 이름은 최상위 함수가 들어있던 코틀린 소스 파일의 이름과 대응한다.  
 코틀린 파일의 모든 최상위 함수는 이 클래스의 정적인 메소드가 된다.  
+따라서 자바에서 joinToString을 호출하기는 쉽다.
 
 ```java
 /* 자바 */
@@ -928,24 +932,24 @@ import strings.JoinKt;
 JoinKt.joinToString(list, ", ", "", "");
 ```
 
-- 파일에 대응하는 클래스의 이름 변경하기  
-
-코틀린 최상위 함수가 포함되는 클래스의 이름을 바꾸고 싶다면 파일에 @JvmName 애노테이션을 추가  
+> #### 파일에 대응하는 클래스의 이름 변경하기  
+> 코틀린 최상위 함수가 포함되는 클래스의 이름을 바꾸고 싶다면 파일에 @JvmName 애노테이션을 추가  
 @JvmName 애노테이션은 파일의 맨 앞, 패키지 이름 선언 이전에 위치해야 한다.
+> ```kotlin
+> @file:JvmName("StringFunctions")    // 클래스 이름을 지정하는 애노테이션
+> package strings
+> fun joinToString(...): String { ... }
+> ```
+>
+> ```java
+> /* 자바 */
+> import strings.StringFunctions;
+> StringFunctions.joinToString(list, ", ", "", "");
+> ```
 
-```kotlin
-@file:JvmName("StringFunctions")    // 클래스 이름을 지정하는 애노테이션
-package strings
-fun joinToString(...): String { ... }
-```
+---
 
-```java
-/* 자바 */
-import strings.StringFunctions;
-StringFunctions.joinToString(list, ", ", "", "");
-```
-
-#### 최상위 프로퍼티
+> #### 최상위 프로퍼티
 
 함수와 마찬가지로 프로퍼티도 파일의 최상위 수준에 놓을 수 있다.  
 
@@ -977,22 +981,20 @@ const 변경자를 추가하면 프로퍼티를 public static final 필드로 �
 /* 자바 */  
 `public static final String UNIX_LINE_SEPARATOR = "\n";`
 
-### 메소드를 다른 클래스에 추가: 확장 함수와 확장 프로퍼티
+## 메소드를 다른 클래스에 추가: 확장 함수와 확장 프로퍼티
 
 __확장 함수__ 는 어떤 클래스의 멤버 메소드인 것처럼 호출할 수 있지만 그 클래스의 밖에 선언된 함수  
+확장 함수를 만드려면 추가하려는 함수 이름 앞에 그 함수가 확장할 클래스 이름을 덧붙이기만 하면 된다.
 
 ```kotlin
 package strings
 fun String.lastChar(): Char = this.get(this.length - 1)
 ```
 
-__수신 객체 타입(receiver type)__: 확장이 정의될 클래스의 타입  
-__수신 객체(receiver object)__: 그 클래스에 속한 인스턴스 객체
+- __수신 객체 타입(receiver type)__: 확장이 정의될 클래스의 타입  
+- __수신 객체(receiver object)__: 그 클래스에 속한 인스턴스 객체
 
-`fun String.lastChar(): Char = this.get(this.length - 1)`
-
-- String: 수신 객체 타입  
-- this: 수신 객체  
+![](./03fig01_alt.jpg)
 
 ```kotlin
 >>> println("Kotlin".lastChar())
@@ -1001,6 +1003,7 @@ n
 // "Kotlin": 수신 객체
 ```
 
+String 클래스에 새로운 메소드를 추가하는 것과 같다.  
 원하는 메소드를 String 클래스에 추가?
 
 ```kotlin
@@ -1009,7 +1012,7 @@ fun String.lastChar(): Char = get(length - 1)
 // this 생략 가능
 ```
 
-하지만 확장 함수 안에서 private멤버나 protected멤버를 사용할 수 없다.
+하지만 확장 함수 안에서는 클래스 내부에서만 사용할 수 있는 private멤버나 protected멤버를 사용할 수 없다.
 
 ### - 임포트와 확장 함수
 
@@ -1038,6 +1041,8 @@ val c = "Kotlin".last()
 
 ### - 자바에서 확장 함수 호출
 
+내부적으로 확장 함수는 수신 객체를 첫 번째 인자로 받는 정적 메소드다.  
+그래서 확장 함수를 호출해도 다른 어댑터 객체나 실행 시점 부가 비용이 들지 않는다.  
 확장 함수를 StringUtil.kt 파일에 정의했다면 다음과 같이 호출할 수 있다.
 
 ```java
@@ -1066,6 +1071,9 @@ fun <T> Collection<T>.joinToString(     // Collection<T>에 대한 확장 함수
 (1; 2; 3)
 ```
 
+원소로 이뤄진 컬렉션에 대한 확장을 만든다.  
+이제 joinToString을 마치 클래스의 멤버인 것처럼 호출할 수 있다.
+
 ```kotlin
 >>> val list = arrayListOf(1, 2, 3)
 >>> println(list.joinToString(" "))
@@ -1073,6 +1081,7 @@ fun <T> Collection<T>.joinToString(     // Collection<T>에 대한 확장 함수
 ```
 
 확장 함수는 단지 정적 메소드 호출에 대한 문법적인 편의일 뿐이다.  
+그래서 클래스가 아닌 더 구체적인 타입을 수신 객체 타입으로 지정할 수 있다.  
 문자열의 컬렉션에 대해서만 호출할 수 있는 join함수 정의
 
 ```kotlin
@@ -1084,6 +1093,7 @@ fun Collection<String>.join(
 >>> println(listOf("one", "two", "eight").join(" "))
 one two eight
 
+// 이 함수를 객체의 리스트에 대해 호출할 수는 없다.
 >>> listOf(1, 2, 8).join()
 Error: Type mismatch: inferred type is List<Int> but Collection<String> was expected.
 ```
@@ -1118,8 +1128,10 @@ Button clicked
 하지만 확장은 이런 식으로 작동하지 않는다.  
 확장 함수는 클래스의 일부가 아니다.  
 확장 함수는 클래스 밖에 선언된다.  
-확장 함수를 호출할 때 수신 객체로 지정한 변수의 정적 타입에 의해 어떤 확장 함수가 호출될 지 결정되지,  
+확장 함수를 호출할 때 _수신 객체로 지정한 변수의 정적 타입_ 에 의해 어떤 확장 함수가 호출될 지 결정되지,  
 그 변수에 저장된 객체의 동적인 타입에 의해 확장 함수가 결정되지 않는다.
+
+![](03fig02.jpg)
 
 ```kotlin
 fun View.showOff() = println("I'm a view!")
@@ -1129,6 +1141,11 @@ fun Button.showOff() = println("I'm a button!")
 I'm a view!
 ```
 
+view가 가리키는 객체의 실제 타입이 Button이지만, 이 경우 view의 타입이 View이기 때문에 무조건 View의 확장 함수가 호출된다.  
+
+확장 함수를 첫 번째 인자가 수신 객체인 정적 자바 메소드로 컴파일한다는 사실을 기억한다면 이런 동작을 쉽게 이해할 수 있다.  
+자바도 호출할 정적 함수를 같은 방식으로 __정적__ 으로 결정한다.
+
 ```java
 /* 자바 */
 >>> View view = new Button();
@@ -1137,35 +1154,37 @@ I'm a view!
 ```
 
 위 예제와 같이 확장 함수를 오버라이드할 수 없다.  
-코틀린은 호출될 확장 함수를 정적으로 결정하기 때문이다.
+코틀린은 호출될 확장 함수를 __정적__ 으로 결정하기 때문이다.
 
-📝Note  
-어떤 클래스를 확장한 함수와 그 클래스의 멤버 함수의 이름과 시그니처가 같다면 확장 함수가 아니라 멤버 함수가 호출된다(멤버 함수의 우선순위가 더 높다).  
+> #### 📝Note  
+> 어떤 클래스를 확장한 함수와 그 클래스의 멤버 함수의 이름과 시그니처가 같다면 _확장 함수가 아니라_ ___멤버 함수가 호출___ 된다(멤버 함수의 우선순위가 더 높다).  
 
 ### - 확장 프로퍼티
 
 확장 프로퍼티를 사용하면 기존 클래스 객체에 대한 프로퍼티 혁식의 구문으로 사용할 수 있는 API를 추가할 수 있다.  
-프로퍼티라는 이름으로 불리기는 하지만 상태를 저장할 적절한 방법이 없기 때문에(기존 클래스의 인스턴스 객체에 필드를 추가할 방법은 없다) 실제로 확장 프로퍼티는 아무 상태도 가질 수 없다.
+프로퍼티라는 이름으로 불리기는 하지만 상태를 저장할 적절한 방법이 없기 때문에(기존 클래스의 인스턴스 객체에 필드를 추가할 방법은 없다) 실제로 확장 프로퍼티는 아무 상태도 가질 수 없다.  
+하지만 프로퍼티 문법으로 더 짧게 코드를 작성할 수 있어서 편한 경우가 있다.
 
 ```kotlin
 val String.lastChar: Char
     get() = get(length - 1)
 ```
 
+확장 함수의 경우와 마찬가지로 확장 프로퍼티도 일반적인 프로퍼티와 같은데, 단지 수신 객체 클래스가 추가됐을 뿐이다.  
 뒷받침하는 필드가 없어서 기본 게터 구현을 제공할 수 없으므로 최소한 게터는 꼭 정의해야 한다.  
 마찬가지로 초기화 코드에서 계산한 값을 담을 장소가 전혀 없으므로 초기화 코드도 쓸 수 없다.  
 
 StringBuilder에 같은 프로퍼티를 정의한다면 StringBuilder의 맨 마지막 문자는 변경 가능하므로 프로퍼티를 var로 만들 수 있다.
 
-변경 가능한 확장 프로퍼티 선언
-
 ```kotlin
+// 변경 가능한 확장 프로퍼티 선언
 var StringBuilder.lastChar: Char
     get() = get(length - 1)     // 프로퍼티 게터
     set(value: Char) {
         this.setCharAt(length - 1, value)   // 프로퍼티 세터
     }
 
+// 확장 프로퍼티를 사용하는 방법은 멤버 프로퍼티를 사용하는 방법과 같다.
 >>> println("Kotlin".lastChar)
 n
 >>> val sb = StringBuilder("Kotlin")
@@ -1176,11 +1195,11 @@ Kotlin!
 
 자바에서 확장 프로퍼티를 사용하고 싶다면 항상 StringUtilKt.getLastChar("Java")처럼 게터나 세터를 명시적으로 호출하여야 한다.
 
-### 컬렉션 처리: 가변 길이 인자, 중위 함수 호출, 라이브러리 지원
+## 컬렉션 처리: 가변 길이 인자, 중위 함수 호출, 라이브러리 지원
 
-- vararg 키워드를 사용하면 호출 시 인자 개수가 달라질 수 있는 함수를 정의할 수 있다.
-- 중위 함수 호출 구문을 사용하면 인자가 하나뿐인 메소드를 간편하게 호출할 수 있다.
-- 구조 분해 선언을 사용하면 복합적인 값을 분해해서 여러 변수에 나눠 담을 수 있다.
+- __vararg 키워드__ 를 사용하면 호출 시 인자 개수가 달라질 수 있는 함수를 정의할 수 있다.
+- __중위 함수__ 호출 구문을 사용하면 인자가 하나뿐인 메소드를 간편하게 호출할 수 있다.
+- __구조 분해 선언__ 을 사용하면 복합적인 값을 분해해서 여러 변수에 나눠 담을 수 있다.
 
 ### - 자바 컬렉션 API 확장
 
@@ -1191,12 +1210,15 @@ fourteenth
 >>> val numbers: Collection<Int> = setOf(1, 14, 2)
 >>> numbers.max()
 14
+```
 
+어떻게 자바 라이브러리 클래스의 인스턴스인 컬렉션에 대해 코틀린이 새로운 기능을 추가할 수 있을까?  
+-> last와 max는 확장 함수!!
+
+```kotlin
 fun <T> List<T>.last(): T { /* 마지막 원소를 반환함 */ }
 fun Collection<Int>.max(): Int { /* 컬렉션의 최댓값을 찾음 */ }
 ```
-
-last와 max는 확장 함수!!
 
 ### - 가변 인자 함수: 인자의 개수가 달라질 수 있는 함수 정의
 
@@ -1210,11 +1232,11 @@ last와 max는 확장 함수!!
 
 자바의 가변 길이 인자(varargs)는 메소드를 호출할 때 원하는 개수만큼 값을 인자로 넘기면 자바 컴파일러가 배열에 그 값들을 넣어주는 기능이다.  
 코틀린의 가변 길이 인자도 비슷하지만 문법이 조금 다르다.  
-타입 뒤에 ...을 붙이는 대신 코틀린에서는 파라미터 앞에 vararg 변경자를 붙인다.  
+타입 뒤에 ...을 붙이는 대신 코틀린에서는 파라미터 앞에 ___vararg___ 변경자를 붙인다.  
 
 이미 배열에 들어있는 원소를 가변 길이 인자로 넘길 때도 코틀린과 자바 구문이 다르다.  
-자바에서는 배열을 그냥 넘기면 되지만 코틀린에서는 배열을 명시적으로 풀어서 배열의 각 원소가 인자로 전달되게 해야 한다.  
-기술적으로는 스프레드(spread)연산자가 그런 작업을 해준다.  
+자바에서는 배열을 그냥 넘기면 되지만 코틀린에서는 _배열을 명시적으로 풀어서_ 배열의 각 원소가 인자로 전달되게 해야 한다.  
+기술적으로는 __스프레드(spread)연산자__ 가 그런 작업을 해준다.  
 하지만 실제로는 전달하려는 배열 앞에 *를 붙이기만 하면 된다.
 
 ```kotlin
@@ -1230,7 +1252,8 @@ fun main(args: Array<String>) {
 
 `val map = mapOf(1 to "one", 7 to "seven", 53 to "fifty-three")`
 
-중위 호출(infix call)로 to라는 일반 메소드를 호출한 것이다.  
+to는 코틀린 키워드가 아니다.  
+__중위 호출(infix call)__ 로 to라는 일반 메소드를 호출한 것이다.  
 중위 호출 시에는 수신 객체와 유일한 메소드 인자 사이에 메소드 이름을 넣는다  
 (이때 객체, 메소드 이름, 유일한 인자 사이에는 공백이 들어가야 한다)
 
@@ -1248,19 +1271,21 @@ infix fun Any.to(other: Any) = Pair(this, other)
 
 to 함수는 Pair의 인스턴스를 반환한다.  
 Pair는 코틀린 표준 라이브러리 클래스로, 두 원소로 이뤄진 순서쌍을 표현한다.  
-실제로 to는 제네릭 함수
+실제로 to는 제네릭 함수지만 여기서는 설명을 위해 그런 세부 사항을 생략
 
 Pair의 내용으로 두 변수를 즉시 초기화할 수 있다.
 
 `val (number, name) = 1 to "one"`
 
-이런 기능을 구조 분해 선언(destructuring declaration)이라고 부른다.
+이런 기능을 __구조 분해 선언(destructuring declaration)__ 이라고 부른다.
 
 Pair 인스턴스 외 다른 객체에도 구조 분해를 적용할 수 있다.  
 예를 들어서 key와 value라는 두 변수를 맵의 원소를 사용해 초기화할 수 있다.
 
 루프에서도 구조 분해 선언을 활용할 수 있다.  
 joinToString에서 본 withIndex를 구조 분해 선언과 조합하면 컬렉션 원소의 인덱스와 값을 따로 변수에 담을 수 있다.
+
+![](./03fig03.jpg)
 
 ```kotlin
 for ((index, element) in collection.withIndex()) {
@@ -1278,19 +1303,19 @@ to를 사용하면 타입과 관계없이 임의의 순서쌍을 만들 수 있�
 listOf와 마찬가지로 mapOf에도 원하는 개수만큼 인자를 전달할 수 있다.  
 하지만 mapOf의 경우에는 각 인자가 키와 값으로 이뤄진 순서쌍이어야 한다.
 
-### 문자열과 정규식 다루기
+## 문자열과 정규식 다루기
 
 코틀린 문자열은 자바 문자열과 같다.  
 코틀린은 다양한 확장 함수를 제공함으로써 표준 자바 문자열을 더 즐겁게 다루게 해준다.  
 자바와 코틀린 API의 차이를 알아보기 위한 첫 번째 예제로 문자열을 구분 문자열에 따라 나누는 작업을 코틀린에서 어떻게 처리하는지 살펴보자.
 
-### - 문자열 나누기
+### -  문자열 나누기
 
 자바에 String의 split 메소드가 있다.  
 스택 오버플로우 질문 중에는 "자바 split 메소드로는 점(.)을 이용해 문자열을 분리할 수 없습니다." 라는 질문이 있다.  
 "12.345-6.A".split(".")라는 호출의 결과가 [12, 345-6, A] 배열이라고 생각하는 실수를 저지르는 개발자가 많다.  
 하지만 자바의 split 메소드는 빈 배열을 반환한다!  
-split의 구분 문자열을 실제로는 정규식(regular expression)이기 때문이다.
+split의 구분 문자열을 실제로는 정규식(regular expression)이기 때문이다.  
 따라서 마침표(.)는 모든 문자를 나타내는 정규식으로 해석된다.
 
 코틀린에서는 자바의 split 대신에 여러 가지 다른 조합의 파라미터를 받는 split 확장 함수를 제공함으로써 혼동을 야기하는 메소드를 감춘다.  
