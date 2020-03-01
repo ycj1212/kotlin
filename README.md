@@ -1880,3 +1880,560 @@ sealed 인터페이스를 정의할 수는 없다.
 
 ## 뻔하지 않은 생성자와 프로퍼티를 갖는 클래스 선언
 
+코틀린은 주 생성자와 부 생성자로 구분한다.  
+- 주 생성자: 클래스를 초기화할 때 주로 사용하는 간략한 생성자로, 클래스 본문 밖에서 정의한다.  
+- 부 생성자: 클래스 본문 안에서 정의한다.  
+
+또한 코틀린에서는 초기화 블록을 통해 초기화 로직을 추가할 수 있다.
+
+### - 클래스 초기화: 주 생성자와 초기화 블록
+
+보통 클래스의 모든 선언은 중괄호 사이에 들어간다.
+
+`class User(val nickname: String)`
+
+이렇게 클래스 이름 뒤에 오는 괄호로 둘러싸인 코드를 __주 생성자__ 라고 부른다.  
+주 생성자는 _생성자 파라미터를 지정_ 하고 그 _생성자 파라미터에 의해 초기화되는 프로퍼티를 정의_ 하는 두 가지 목적에 쓰인다.  
+
+```kotlin
+class User constructor(_nickname: String) { // 파라미터가 하나만 있는 주 생성자
+    val nickname: String
+    init {  // 초기화 블록
+        nickname = _nickname
+    }
+}
+```
+
+- `constructor` 키워드: 주 생성자나 부 생성자 정의를 시작할 때 사용
+- `init` 키워드: 초기화 블록을 시작
+
+nickname 프로퍼티를 초기화하는 코드를 nickname 프로퍼티 선언에 포함 시킬 수 있어서 초기화 코드를 초기화 블록에 넣을 필요가 없다.  
+또한 주 생성자 앞에 별다른 애노테이션이나 가시성 변경자가 없다면 constructor를 생략해도 좋다.
+
+```kotlin
+class User(_nickname: String) { // 파라미터가 하나뿐인 주 생성자
+    val nickname = _nickname    // 프로퍼티를 주 생성자의 파라미터로 초기화한다.
+}
+```
+
+```kotlin
+class User(val nickname: String)    // "val"은 파라미터에 상응하는 프로퍼티가 생성된다는 뜻이다.
+```
+
+생성자 파라미터에도 디폴트 값을 정의할 수 있다.
+
+```kotlin
+class User(val nickname: String,    // 생성자 파라미터에 대한 디폴트 값을 제공한다.
+           val isSubscribed: Boolean = true)
+```
+
+클래스의 인스턴스를 만드려면 new 키워드 없이 생성자를 직접 호출하면 된다.
+
+```kotlin
+>>> val hyun = User("현석")
+>>> println(hyun.isSubscribed)
+true
+>>> val gye = User("계영", false)
+>>> println(gye.isSubscribed)
+false
+>>> val hye = User("헤원", isSubscribed = false)
+>>> println(hey.isSubscribed)
+false
+```
+
+> #### 📝Note  
+> 모든 생성자 파라미터에 디폴트 값을 지정하면 컴파일러가 자동으로 파라미터 없는 생성자를 만들어준다.  
+그렇게 자동으로 만들어진 파라미터 없는 생성자는 디폴트 값을 사용해 클래스를 초기화한다.  
+의존관계 주입(DI, Dependency Injection) 프레임워크 등 자바 라이브러리 중에는 파라미터 없는 생성자를 통해 객체를 생성해야만 라이브러리 사용이 가능한 경우가 있는데, 코틀린이 제공하는 파라미터 없는 생성자는 그런 라이브러리와의 통합을 쉽게 해준다.
+
+```kotlin
+open class User(val nickname: String) { ... }
+class TwitterUser(nickname: String) : User(nickname) { ... }    // 기반 클래스 초기화
+```
+
+클래스를 정의할 때 별도로 생성자를 정의하지 않으면 컴파일러가 자동으로 아무 일도 하지 않는 인자가 없는 디폴트 생성자를 만들어준다.  
+
+```kotlin
+open class Button   // 인자가 없는 디폴트 생성자가 만들어진다.
+```
+
+Button의 생성자는 아무 인자도 받지 않지만, Button 클래스를 상속한 하위 클래스는 반드시 Button 클래스의 생성자를 호출해야 한다.
+
+```kotlin
+class RadioButton: Button()
+```
+
+기반 클래스의 이름 뒤에는 꼭 괄호가 들어간다.  
+반면 인터페이스는 생성자가 없기 때문에 아무 괄호도 없다.  
+
+어떤 클래스를 클래스 외부에서 인스턴스화하지 못하게 막고 싶다면 모든 생성자를 private으로 만들면 된다.  
+
+```kotlin
+class Secretive private constructor() {}    // 이 클래스의 주 생성자는 비공개다.
+```
+
+외부에서는 Secretive를 인스턴스화할 수 없다.
+
+> #### 비공개 생성자에 대한 대안
+> 유틸리티 함수를 담아두는 역할만을 하는 클래스는 인스턴스화할 필요가 없고, 싱글턴인 클래스는 미리 정한 팩토리 메소드 등의 생성 방법을 통해서만 객체를 생성해야 한다.  
+자바에서는 이런 더 일반적인 요구 사항을 명시할 방법이 없으므로 어쩔 수 없이 private 생성자를 정의해서 클래스를 다른 곳에서 인스턴스화하지 못하게 막는 경우가 생긴다.  
+코틀린은 그런 경우를 언어에서 기본 지원한다.  
+정적 유틸리티 함수 대신 최상위 함수를 사용할 수 있고, 싱글턴을 사용하고 싶으면 객체를 선언하면 된다.
+
+### - 부 생성자: 상위 클래스를 다른 방식으로 초기화
+
+생성자가 여럿 필요한 경우가 가끔 있다.
+
+```kotlin
+open class View {
+    constructor(ctx: Context) {
+        // Code
+    }
+    constructor(ctx: Context, attr: AttributeSet) {
+        // Code
+    }
+}
+```
+
+이 클래스는 주 생성자를 선언하지 않고, 부 생성자 2가지 선언한다.  
+부 생성자는 `constructor` 키워드로 시작한다.  
+필요에 따라 얼마든지 부 생성자를 많이 선언해도 된다.  
+
+```kotlin
+class MyButton : View {
+    constructor(ctx: Context)
+        : super(ctx) {  // 상위 클래스의 생성자를 호출
+        // ...
+    }
+    constructor(ctx: Context, attr: AttributeSet)
+        : super(ctx, attr) {    // 상위 클래스의 생성자를 호출
+        // ...
+    }
+}
+```
+
+그림에서 화살표는 생성자가 상위 클래스 생성자에게 객체 생성을 위임한다는 사실을 표시한다.
+
+![](./04fig03_alt.jpg)
+
+자바와 마찬가지로 생성자에서 this()를 통해 클래스 자신의 다른 생성자를 호출할 수 있다.
+
+```kotlin
+class MyButton : View {
+    constructor(ctx: Context): this(ctx, MY_STYLE) {    // 이 클래스의 다른 생성자에게 위임
+        // ...
+    }
+    constructor(ctx: Context, attr: AttributeSet): super(ctx, attr) {
+        // ...
+    }
+}
+```
+
+MyButton 클래스의 생성자 중 하나가 아래 그림처럼 파라미터의 디폴트 값을 넘겨서 같은 클래스의 다른 생성자(this를 사용해 참조)에게 생성을 위임한다.  
+두 번째 생성자는 여전히 super()를 호출한다.
+
+![](./04fig04_alt.jpg)
+
+클래스에 주 생성자가 없다면 모든 부 생성자는 반드시 상위 클래스를 초기화 하거나 다른 생성자에게 생성을 위임해야 한다.  
+
+부 생성자가 필요한 주된 이유는 자바 상호운용성이다.  
+하지만 부 생성자가 필요한 다른 경우도 있다.  
+클래스 인스턴스를 생성할 때 파리미터 목록이 다른 생성 방법이 여럿 존재하는 경우에는 부 생성자를 여럿 둘 수밖에 없다.  
+
+### - 인터페이스에 선언된 프로퍼티 구현
+
+코틀린에서는 인터페이스에 추상 프로퍼티 선언을 넣을 수 있다.
+
+```kotlin
+interface User {
+    val nickname: String
+}
+```
+
+이는 User 인터페이스를 구현하는 클래스가 nickname의 값을 얻을 수 있는 방법을 제공해야 한다는 뜻이다.
+
+```kotlin
+class PrivateUser(override val nickname: String) : User // 주 생성자에 있는 프로퍼티
+class SubscribingUser(val email: String) : User {
+    override val nickname: String
+        get() = email.substringBefore('@')  // 커스텀 게터
+}
+class FacebookUser(val accountId: Int) : User {
+    override val nickname = getFacebookName(accountId)  // 프로퍼티 초기화 식
+}
+>>> println(PrivateUser("test@kotlinlang.org").nickname)
+test@kotlinlang.org
+>>> println(SubscribingUser("test@kotlinlang.org").nickname)
+test
+```
+
+PrivateUser는 주 생성자 안에 프로퍼티를 직접 선언하는 간결한 구문을 사용한다.  
+이 프로퍼티는 User의 추상 프로퍼티를 구현하고 있으므로 override를 표시해야 한다.  
+
+SubscribingUser는 커스텀 게터로 nickname 프로퍼티를 설정한다.
+
+FacebookUser에서는 초기화 식으로 nickname 값을 초기화한다.  
+
+SubscribingUser의 nickname은 매번 호출될 때마다 substringBefore를 호출해 계산하는 커스텀 게터를 활용하고,  
+FacebookUser의 nickname은 객체 초기화 시 계산한 데이터를 뒷받침하는 필드에 저장했다가 불러오는 방식을 활용
+
+인터페이스에는 추상 프로퍼티뿐 아니라 게터와 세터가 있는 프로퍼티를 선언할 수도 있다.  
+물론 그런 게터와 세터는 뒷받침하는 필드를 참조할 수는 없다(뒷받침하는 필드가 있다면 인터페이스에 상태를 추가하는 셈인데 인터페이스에는 상태를 저장할 수 없다).  
+
+```kotlin
+interface User {
+    val email: String
+    val nickname: String
+        get() = email.substringBefore('@')  // 프로퍼티에 뒷받침하는 필드가 없다. 대신 매번 결과를 계산해 돌려준다.
+}
+```
+
+이 인터페이스에는 추상 프로퍼티인 email과 커스텀 게터가 있는 nickname 프로퍼티가 함께 들어있다.  
+하위 클래스는 추상 프로퍼티인 email을 반드시 오버라이드해야 한다.  
+반면 nickname은 오버라이드하지 않고 상속할 수 있다.  
+
+### - 게터와 세터에서 뒷받침하는 필드에 접근
+
+값을 저장하는 동시에 로직을 실행할 수 있게 하기 위해서는 접근자 안에서 프로퍼티를 뒷받침하는 필드에 접근할 수 있어야 한다.
+
+```kotlin
+class User(val name: String) {
+    var address: String = "unspecified"
+        set(value: String) {
+            println("""
+                Address was changed for $name:
+                "$field" -> "$value".""".trimIndent())  // 뒷받침하는 필드 값 읽기
+            field = value   // 뒷받침하는 필드 값 변경하기
+        }
+}
+>>> val user = User("Alice")
+>>> user.address = "Elsenheimerstrasse 47, 80687 Muenchen"  // address의 세터 호출
+Address was changed for Alice:
+"unspecified" -> "Elsenheimerstrasse 47, 80687 Muenchen".
+```
+
+접근자의 본문에서는 field라는 특별한 식별자를 통해 뒷받침하는 필드에 접근할 수 있다.  
+게터에서는 field 값을 읽을 수만 있고, 세터에서는 field 값을 읽거나 쓸 수 있다.  
+
+변경 가능 프로퍼티의 게터와 세터 중 한쪽만 직접 정의해도 된다는 점을 기억하라.  
+address의 게터는 필드 값을 그냥 반환해주는 뻔한 게터다.  
+따라서 게터를 굳이 정의할 필요가 없다.  
+
+컴파일러는 디폴트 접근자 구현을 사용하건 직접 게터나 세터를 정의하건 관계없이 게터나 세터에서 field를 사용하는 프로퍼티에 대해 뒷받침하는 필드를 생성해준다.  
+다만 field를 사용하지 않는 커스텀 접근자 구현을 정의한다면 뒷받침하는 필드는 존재하지 않는다(프로퍼티가 val인 경우에는 게터에 field가 없으면 되지만, var인 경우에는 게터나 세터 모두에 field가 없어야 한다).
+
+### - 접근자의 가시성 변경
+
+접근자의 가시성은 기본적으로는 프로퍼티의 가시성과 같다.  
+하지만 원한다면 get이나 set 앞에 가시성 변경자를 추가해서 접근자의 가시성을 변경할 수 있다.
+
+```kotlin
+class LengthCounter {
+    var counter: Int = 0
+        private set // 이 클래스 밖에서 이 프로퍼티의 값을 바꿀 수 없다.
+    fun addWord(word: String) {
+        counter += word.length
+    }
+}
+
+>>> val lengthCounter = LengthCounter()
+>>> lengthCounter.addWord("Hi!")
+>>> println(lengthCounter.counter)
+3
+```
+
+## 컴파일러가 생성한 메소드: 데이터 클래스와 클래스 위임
+
+코틀린 컴파일러가 데이터 클래스에 유용한 메소드를 자동으로 만들어주는 예와 클래스 위임 패턴을 아주 간단하게 쓸 수 있는 예를 살펴보자.
+
+### - 모든 클래스가 정의해야 하는 메소드
+
+자바와 마찬가지로 코틀린 클래스도 toString, equals, hashCode 등을 오버라이드할 수 있다.  
+
+```kotlin
+class Client(val name: String, val postalCode: Int)
+```
+
+> #### 문자열 표현: toString()
+
+자바처럼 코틀린의 모든 클래스도 인스턴스의 문자열 표현을 얻을 방법을 제공한다.
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+    override fun toString() = "Client(name=$name, postalCode=$postalCode)"
+}
+
+>>> val client1 - Client("오현석", 4122)
+>>> println(client1)
+Client(name=오현석, postalCode=4122)
+```
+
+> #### 객체의 동등성: equals()
+
+```kotlin
+>>> val client1 = Client("오현석", 4122)
+>>> val client2 = Client("오현석", 4122)
+>>> println(client1 == client2) // 코틀린에서 == 연산자는 참조 동일성을 검사하지 않고 객체의 동등성을 검사한다. 따라서 == 연산은 equals를 호출하는 식으로 컴파일된다.
+false
+```
+
+> #### 동등성 연산에 ==를 사용함
+> 자바에서는 ==를 원시 타입과 참조 타입을 비교할 때 사용한다.  
+원시 타입의 경우 ==는 두 피연산자의 값이 같은지 비교한다(동등성(equality)).  
+반면 참조 타입의 경우 ==는 두 피연산자의 주소가 같은지를 비교한다(참조 비교(reference comparision)).  
+따라서 자바에서는 두 객체의 동등성을 알려면 equals를 호출해야 한다.  
+자바에서는 equals 대신 ==를 호출하면 문제가 될 수 있다는 사실도 아주 잘 알려져 있다.  
+>
+> 코틀린에서는 ==연산자가 두 객체를 비교하는 기본적인 방법이다.  
+==는 내부적으로 equals를 호출해서 객체를 비교한다.  
+따라서 클래스가 equals를 오버라이드하면 ==를 통해 안전하게 그 클래스의 인스턴스를 비교할 수 있다.  
+참조 비교를 위해서는 === 연산자를 사용할 수 있다.  
+=== 연산자는 자바에서 객체의 참조를 비교할 때 사용하는 == 연산자와 같다.
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+    override fun equals(other: Any?): Boolean { // "Any"는 java.lang.Object에 대응하는 클래스로, 코틀린의 모든 클래스의 최상위 클래스다. "Any?"는 널이 될 수 있는 타입이므로 "other"는 null일 수 있다.
+        if (other == null || other !is Client)  // "other"가 Client인지 검사한다.
+            return false
+        return name == other.name &&    // 두 객체의 프로퍼티 값이 서로 같은지 검사한다.
+            postalCode == other.postalCode
+    }
+    override fun toString() = "Client(name=$name, postalCode=$postalCode)"
+}
+```
+
+client1 == client2는 이제 true를 반환한다.  
+하지만 Client 클래스로 더 복잡한 작업을 수행해보면 제대로 작동하지 않는 경우가 있다.
+
+> #### 해시 컨테이너: hashCode()
+
+자바에서는 equals를 오버라이드할 때 반드시 hashCode도 함께 오버라이드해야 한다.  
+
+```kotlin
+>>> val processed = hashSetOf(Client("오현석", 4122))
+>>> println(processed.contains(Client("오현석", 4122)))
+false
+```
+
+이는 Client 클래스가 hashCode 메소드를 정의하지 않았기 때문이다.  
+JVM 언어에서는 hashCode가 지켜야 하는 "equals()가 true를 반환하는 두 객체는 반드시 같은 hashCode()를 반환해야 한다"는 제약이 있다.
+
+```kotlin
+class Client(val name: String, val postalCode: Int) {
+    ...
+    override fun hashCode(): Int = name.hashCode() * 31 + postalCode
+}
+```
+
+코틀린 컴파일러는 이 모든 메소드를 자동으로 생성해줄 수 있다.
+
+### - 데이터 클래스: 모든 클래스가 정의해야 하는 메소드 자동 생성
+
+어떤 클래스가 데이터를 저장하는 역할만을 수행한다면 toString, equals, hashCode를 반드시 오버라이드해야 한다.  
+이런 메소드를 정의하기는 그리 어렵지 않다.  
+data라는 변경자를 클래스 앞에 붙이면 필요한 메소드를 컴파일러가 자동으로 만들어준다.  
+data 변경자가 붙은 클래스를 데이터 클래스라고 부른다.  
+
+```kotlin
+data class Client(val name: String, val postalCode: Int)
+```
+
+이제 Client 클래스는 자바에서 요구하는 모든 메소드를 포함한다.
+
+- 인스턴스 간 비교를 위한 equals
+- HashMap과 같은 해시 기반 컨터이너에서 키로 사용할 수 있는 hashCode
+- 클래스의 각 필드를 선언 순서대로 표시하는 문자열 표현을 만들어주는 toString
+
+equals와 hashCode는 주 생성자에 나열된 모든 프로퍼티를 고려해 만들어진다.  
+생성된 equals 메소드는 모든 프로퍼티 값의 동등성을 확인한다.  
+hashCode 메소드는 모든 프로퍼티의 해시 값을 바탕으로 계산한 해시 값을 반환한다.  
+이때 주 생성자 밖에 정의된 프로퍼티는 equals나 hashCode를 계산할 때 고려의 대상이 아니다.
+
+> #### 데이터 클래스와 불변성: copy() 메소드
+
+데이터 클래스 인스턴스를 불변 객체로 더 쉽게 활용할 수 있게 코틀린 컴파일러는 한 가지 편의 메소드를 제공한다.  
+그 메소드는 객체를 복사하면서 일부 프로퍼티를 바꿀 수 있게 해주는 copy 메소드다.  
+복사본은 원본과 다른 생명주기를 가지며, 복사를 하면서 일부 프로퍼티 값을 바꾸거나 복사본을 제거해도 프로그램에서 원본을 참조하는 다른 부분에 전혀 영향을 끼치지 않는다.  
+
+```kotlin
+class Client(val name: String, val pastalCode: Int) {
+    ...
+    fun copy(name: String = this.name,
+             postalCode: Int = this.postalCody) =
+        Client(name, postalCode)
+}
+
+>>> val lee = Client("이계영", 4122)
+>>> println(lee.copy(postalCode = 4000))
+Client(name=이계영, postalCode=4000)
+```
+
+### - 클래스 위임: by 키워드 사용
+
+종종 상속을 허용하지 않는 클래스에 새로운 동작을 추가해야 할 때가 있다.  
+이럴 때 사용하는 일반적인 방법이 __데코레이터__ 패턴이다.  
+이 패턴의 핵심은 상속을 허용하지 않는 클래스 대신 사용할 수 있는 새로운 클래스(데코레이터)를 만들되 기존 클래스와 같은 인터페이스를 데코레이터가 제공하게 만들고, 기존 클래스를 데코레이터 내부에 필드로 유지하는 것이다.  
+이때 새로 정의해야 하는 기능은 데코레이터의 메소드에 새로 정의하고 기존 기능이 그대로 필요한 부분은 데코레이터의 메소드가 기존 클래스의메소드에게 요청을 __전달__ 한다.
+
+이런 접근 방법의 단점은 준비 코드가 상당히 많이 필요하다는 점이다.  
+
+```kotlin
+class DelegatingCollection<T> : Collection<T> {
+    private val innerList = arrayListOf<T>()
+    
+    override int size: Int get() = innerList.size
+    override fun isEmpty(): Boolean = innerList.isEmpty()
+    override fun contains(element: T): Boolean = innerList.contains(element)
+    override fun iterator(): Iterator<T> = innerList.iterator()
+    override fun containsAll(elements: Collection<T>): Boolean =
+        innerList.containsAll(elements)
+}
+```
+
+인터페이스를 구현할 때 by 키워드를 통해 그 인터페이스에 대한 구현을 다른 객체에 위임 중이라는 사실을 명시할 수 있다.
+
+```kotlin
+class DelegatingCollection<T>(
+    innerList: Collection<T> = ArrayList<T>()
+) : Collection<T> by innerList {}
+```
+
+클래스 안에 있던 모든 메소드 정의가 없어졌다.  
+컴파일러가 그런 전달 메소드를 자동으로 생성하며 자동 생성한 코드의 구현은 DelegatingCollection에 있던 구현과 비슷하다.
+
+```kotlin
+class CountingSet<T>(
+    val innerSet: MutableCollection<T> = HashSet<T>()
+) : MutableCollection<T> by innerSet {  // MutableCollection의 구현을 innerSet에게 위임한다.
+    var objectsAdded = 0
+
+    override fun add(element: T): Boolean { // 위임하지 않고 새로운 구현을 제공한다.
+        objectsAdded++
+        return innerSet.add(element)
+    }
+
+    override fun addAll(c: Collection<T>): Boolean {    // 위임하지 않고 새로운 구현을 제공한다.
+        objectsAdded += c.size
+        return innerSet.addAll(c)
+    }
+}
+
+>>> val cset = CountingSet<Int>()
+>>> cset.addAll(listOf(1, 1, 2))
+>>> println("${cset.objectAdded} objects were added, ${cset.size} remain")
+3 objects were added, 2 remain
+```
+
+## object 키워드: 클래스 선언과 인스턴스 생성
+
+코틀린에서는 object 키워드를 다양한 상황에서 사용하지만 모든 경우 클래스를 정의하면서 동시에 인스턴스를 생성한다는 공통점이 있다.  
+
+`object` 키워드
+
+- 객체 선언은 싱글턴을 정의하는 방법 중 하나다.
+- 동반 객체는 인스턴스 메소드는 아니지만 어떤 클래스와 관련 있는 메소드와 팩토리 메소드를 담을 때 쓰인다. 동반 객체 메소드에 접근할 때는 동반 객체가 포함된 클래스의 이름을 사용할 수 있다.
+- 객체 식은 자바의 무명 내부 클래스 대신 쓰인다.
+
+### - 객체 선언: 싱글턴을 쉽게 만들기
+
+객체지향 시스템을 설계하다 보면 인스턴스가 하나만 필요한 클래스가 유용한 경우가 많다.  
+자바에서는 보통 클래스의 생성자를 private으로 제한하고 정적인 필드에 그 클래스의 유일한 객체를 저장하는 싱글턴 패턴을 통해 이를 구현한다.  
+
+코틀린은 __객체 선언__ 기능을 통해 싱글턴을 언어에서 기본 지원한다.  
+객체 선언은 클래스 선언과 그 클래스에 속한 __단일 인스턴스__ 의 선언을 합친 선언이다.  
+
+```kotlin
+object Payroll {
+    val allEmployees = arrayListOf<Person>()
+
+    fun calculateSalary() {
+        for (person in allEmployees) {
+            ...
+        }
+    }
+}
+```
+
+객체 선언은 object 키워드로 시작한다.  
+객체 선언은 클래스를 정의하고 그 클래스의 인스턴스를 만들어서 변수에 저장하는 모든 작업을 단 한 문장으로 처리한다.  
+클래스와 마찬가지로 객체 선언 안에도 프로퍼티, 메소드, 초기화 블록 등이 들어갈 수 있다.  
+하지만 생성자는 객체 선언에 쓸 수 없다.  
+일반 클래스 인스턴스와 달리 싱글턴 객체는 객체 선언문이 있는 위치에서 생성자 호출 없이 즉시 만들어진다.  
+따라서 객체 선언에는 생성자 정의가 필요 없다.  
+
+변수와 마찬가지로 객체 선언에 사용한 이름 뒤에 마침표(.)를 붙이면 객체에 속한 메소드나 프로퍼티에 접근 가능
+
+```kotlin
+Payroll.allEmployees.add(Person(...))
+Payroll.calculateSalary()
+```
+
+객체 선언도 클래스나 인터페이스를 상속할 수 있다.  
+프레임워크를 사용하기 위해 특정 인터페이스를 구현해야 하는데, 그 구현 내부에 다른 상태가 필요하지 않은 경우에 이런 기능이 유용하다.  
+예를 들어 java.util.Comparator 인터페이스를 살펴보자.  
+Comparator 구현은 두 객체를 인자로 받아 그중 어느 객체가 더 큰지 알려주는 정수를 반환한다.  
+Comparator 안에는 데이터를 저장할 필요가 없다.  
+따라서 어떤 클래스에 속한 객체를 비교할 때 사용하는 Comparator는 보통 클래스마다 하나씩만 있으면 된다.  
+따라서 Comparator 인스턴스를 만드는 방법으로는 객체 선언이 가장 좋은 방법이다.
+
+```kotlin
+object CaseInsensitiveFileComparator : Comparator<File> {
+    override fun compare(file1: File, file2: File): Int {
+        return file1.path.compareTo(file2.path, ignoreCase = true)
+    }
+}
+
+>>> println(CaseInsensitiveFileComparator.compare(
+... File("/User"), File("/user")))
+0
+```
+
+일반 객체를 사용할 수 있는 곳에서는 항상 싱글턴 객체를 사용할 수 있다.  
+예를 들어 이 객체를 Comparator를 인자로 받는 함수에게 인자로 넘길 수 있다.
+
+```kotlin
+>>> val files = listOf(File("/Z"), File("/a"))
+>>> println(files.sortedWith(CaseInsensitiveFileComparator))
+[/a, /Z]
+```
+
+> #### 싱글턴과 의존관계 주입
+> 싱글턴 패턴과 마찬가지 이유로 대규모 소프트웨어 시스템에서는 객체 선언이 항상 적합하지는 않다.  
+의존관계가 별로 많지 않은 소규모 소프트웨어에서는 싱글턴이나 객체 선언이 유용하지만, 시스템을 구현하는 다양한 구성 요소와 상호작용하는 대규모 컴포넌트에는 싱글턴이 적합하지는 않다.  
+이유는 객체 생성을 제어할 방법이 없고 생성자 파라미터를 지정할 수 없어서다.  
+> 
+> 생성을 제어할 수 없고 생성자 파라미터를 지정할 수 없으므로 단위 테스트를 하거나 소프트웨어 시스템의 설정이 달라질 때 객체를 대체하거나 객체의 의존관계를 바꿀 수 없다.  
+따라서 그런 기능이 필요하다면 자바와 마찬가지로 의존관계 주입 프레임워크(예: 구글 주스(Guice), https://github.com/google/guice)와 코틀린 클래스를 함께 사용해야 한다.
+
+클래스 안에서 객체를 선언할 수도 있다.  
+그런 객체도 인스턴스는 단 하나뿐이다.  
+예를 들어 어떤 클래스의 인스턴스를 비교하는 Comparator를 클래스 내부에 정의하는게 더 바람직하다.  
+
+```kotlin
+data class Person(val name: String) {
+    object NameComparator : Comparator<Person> {
+        override fun compare(p1: Person, p2: Person): Int = 
+            p1.name.compareTo(p2.name)
+    }
+}
+
+>>> val persons = listOf(Person("Bob"), Person("Alice"))
+>>> println(persons.sortedWith(person.NameComparator))
+[Person(name=Alice), Person(name=Bob)]
+```
+
+> #### 코틀린 객체를 자바에서 사용하기
+> 코틀린 객체 선언은 유일한 인스턴스에 대한 정적인 필드가 있는 자바 클래스로 컴파일된다.  
+이때 인스턴스 필드의 이름은 항상 INSTANCE다.  
+싱글턴 패턴을 자바에서 구현해도 비슷한 필드가 필요하다.  
+자바 코드에서 코틀린 싱글턴 객체를 사용하려면 정적인 INSTANCE 필드를 통하면 된다.
+>
+> ```java
+> /* 자바 */
+> CaseInsensitiveFileComparator.INSTANCE.compare(file1, file2);
+> ```
+> 
+> 이 예제에서 INSTANCE 필드의 타입은 CaseInsensitiveFileComparator 다.
+
+### - 동반 객체: 팩토리 메소드와 정적 멤버가 들어갈 장소
+
