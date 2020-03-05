@@ -2911,3 +2911,478 @@ people.maxBy { it.age } // "it"은 자동 생성된 파라미터 이름이다.
 
 ### - 현재 영역에 있는 변수에 접근
 
+자바 메소드 안에서 무명 내부 클래스를 정의할 때 메소드의 로컬 변수를 무명 내부 클래스에서 사용할 수 있다.  
+람다 안에서도 같은 일을 할 수 있다.  
+람다를 함수 안에서 정의하면 함수의 파라미터뿐 아니라 람다 정의의 앞에 선언된 로컬 변수까지 람다에서 모두 사용할 수 있다.  
+
+```kotlin
+fun printMessageWithPrefix(message: Collection<String>, prefix: String) {
+    message.forEach {   // 각 원소에 대해 수행할 작업을 람다로 받는다.
+        println("$prefix $it")  // 람다 안에서 함수의 "prefix" 파라미터를 사용한다.
+    }
+}
+
+>>> val errors = listOf("403 Forbidden", "404 Not Found")
+>>> printMessageWithPrefix(errors, "Error:")
+Error: 403 Forbidden
+Error: 404 Not Found
+```
+
+자바와 다른 점 중 중요한 한 가지는 코틀린 람다 안에서는 파이널 변수가 아닌 변수에 접근할 수 있다는 점이다.  
+또한 람다 안에서 바깥의 변수를 변경해도 된다.  
+다음 코드는 전달받은 상태 코드 목록에 있는 클라이언트와 서버 오류의 횟수를 센다.
+
+```kotlin
+fun printProblemCounts(responses: Collection<String>) {
+    var clientErrors = 0
+    var serverErrors = 0
+    responses.forEach {
+        if (it.startsWith("4")) {
+            clientErrors++
+        } else if (it.startsWith("5")) {
+            serverErrors++
+        }
+    }
+    println("$clientErrors client errors, $serverErrors server errors")
+}
+
+>>> val responses = listOf("200 OK", "418 I'm a teapot", "500 Internal Server Error")
+>>> printProblemCounts(responses)
+1 client errors, 1 server errors
+```
+
+코틀린에서는 자바와 달리 람다에서 람다 밖 함수에 있는 파이널이 아닌 변수에 접근할 수 있고, 그 변수를 변경할 수도 있다.  
+이 예제의 prefix, clientErrors, serverErrors와 같이 람다 안에서 사용하는 외부 변수를 '람다가 포획(capture)한 변수'라고 부른다.  
+
+> 람다를 실행 시점에 표현하는 데이터 구조는 람다에서 시작하는 모든 참조가 닫힌 객체 그래프를 람다 코드와 함께 저장해야 한다.  
+그런 데이터 구조를 클로저(closure)라고 부른다.  
+함수를 쓸모 있는 1급 시민으로 만드려면 포획한 변수를 제대로 처리해야 하고, 포획한 변수를 제대로 저리하려면 클로저가 꼭 필요하다.  
+그래서 람다를 클로저라고 부르기도 한다.  
+람다, 무명 함수, 함수 리터럴, 클로저를 서로 혼용하는 일이 많다.
+
+기본적으로 함수 안에 정의된 로컬 변수의 생명주기는 함수가 반환되면 끝난다.  
+하지만 어떤 함수가 자신의 로컬 변수를 포획한 람다를 반환하거나 다른 변수에 저장한다면 로컬 변수의 생명주기와 함수의 생명주기가 달라질 수 있다.  
+포획한 변수가 있는 람다를 저장해서 함수가 끝난 뒤에 실행해도 람다의 본문 코드는 여전히 포획한 변수를 읽거나 쓸 수 있다.
+어떻게 그런 동작이 가능할까?  
+파이널 변수를 포획한 경우에는 람다 코드를 변수 값과 함께 저장한다.  
+파이널이 아닌 변수를 포획한 경우에는 변수를 특별한 래퍼로 감싸서 나중에 변경하거나 읽을 수 있게 한 다음, 래퍼에 대한 참조를 람다 코드와 함께 저장한다.  
+
+> #### 변경 가능한 변수 포획하기: 자세한 구현 방법
+> 자바에서는 파이널 변수만 포횔할 수 있다.  
+하지만 교묘한 속임수를 통해 변경 가능한 변수를 포획할 수 있다.  
+그 속임수는 변경 가능한 변수를 저장하는 원소가 단 하나뿐인 배열을 선언하거나, 변경 가능한 변수를 필드로 하는 클래스를 선언하는 것이다(안에 들어있는 원소는 변경 가능할지라도 배열이나 클래스의 인스턴스에 대한 참조를 final로 만들면 포획이 가능하다).  
+이런 속임수를 코틀린으로 작성하면 다음과 같다.  
+>
+> ```kotlin
+> class Ref<T>(var value: T)    // 변경 가능한 변수를 포획하는 방법을 보여주기 위한 클래스
+> >>> val counter = Ref(0)
+> >>> val inc = { counter.value++ } // 공식적으로 변경 불가능한 변수를 포획했지만 그 변수가 가리키는 객체의 필드 값을 바꿀 수 있다.
+> ```
+> 
+> 실제 코드에서는 이런 래퍼를 만들지 않아도 된다.  
+대신, 변수를 직접 바꾼다.
+>
+> ``` kotlin
+> var counter = 0
+> var inc = { counter++ }
+> ```
+>
+> 이 코틀린 코드가 어떻게 작동할까?  
+첫 번째 예제는 두 번째 예제가 작동하는 내부 모습을 보여준다.  
+람다가 파이널 변수(val)를 포획하면 자바와 마찬가지로 그 변수의 값이 복사된다.  
+하지만 람다가 변경 가능한 변수(var)를 포획하면 변수를 Ref 클래스 인스턴스에 넣는다.  
+그 Ref 인스턴스에 대한 참조를 파이널로 만들면 쉽게 람다로 포획할 수 있고, 람다 안에서는 Ref 인스턴스의 필드를 변경할 수 있다.
+
+한 가지 꼭 알아둬야 할 함정이 있다.  
+람다를 이벤트 핸들러나 다른 비동기적으로 실행되는 코드로 활용하는 경우 함수 호출이 끝난 다음에 로컬 변수가 변경될 수도 있다.  
+예를 들어 다음 코드는 버튼 클릭 횟수를 제대로 셀 수 없다.  
+
+```kotlin
+fun tryToCountButtonClicks(button: Button): Int {
+    var clicks = 0
+    button.onClick { clicks++ }
+    return clicks
+}
+```
+
+이 함수는 항상 0을 반환한다.  
+onClick 핸들러는 호출될 때마다 clicks의 값을 증가시키지만 그 값의 변경을 관찰할 수는 없다.  
+핸들러는 tryToCountButtonClicks가 clicks를 반환한 다음에 호출되기 때문이다.  
+이 함수를 제대로 구현하려면 클릭 횟수를 세는 카운터 변수를 함수의 내부가 아니라 클래스의 프로퍼티나 전역 프로퍼티 등의 위치로 빼내서 나중에 변수 변화를 살펴볼 수 있게 해야 한다.  
+
+### - 멤버 참조
+
+람다를 사용해 코드 블록을 다른 함수에게 인자로 넘기는 방법을 살펴봤다.  
+하지만 넘기려는 코드가 이미 함수로 선언된 경우는 어떻게 해야할까?  
+물론 그 함수를 호출하는 람다를 만들면 된다.  
+하지만 이는 중복이다.  
+함수를 직접 넘길 수는 없을까?  
+
+코틀린에서는 자바 8과 마찬가지로 함수를 값으로 바꿀 수 있다.  
+이때 이중 콜론을 사용한다.  
+
+```kotlin
+val getAge = Person::age
+```
+
+::를 사용하는 식을 멤버 참조라고 부른다.  
+멤버 참조는 프로퍼티나 메소드를 단 하나만 호출하는 함수 값을 만들어준다.  
+::는 클래스 이름과 여러분이 참조하려는 멤버(프로퍼티나 메소드) 이름 사이에 위치한다.  
+
+![](./05fig02.jpg)
+
+Person::age는 같은 역할을 하는 다음 람다 식을 더 간략하게 표현한 것이다.  
+
+```kotlin
+val getAge = { person: Person -> person.age }
+```
+
+참조 대상이 함수인지 프로퍼티인지와는 관계없이 멤버 참조 뒤에는 괄호를 넣으면 안된다.
+
+멤버 참조는 그 멤버를 호출하는 람다와 같은 타입이다.  
+따라서 다음 예처럼 그 둘을 자유롭게 바꿔 쓸 수 있다.
+
+```kotlin
+fun salute() = println("Salute!")
+>>> run(::salute)   // 최상위 함수를 참조한다.
+Salute!
+```
+
+클래스 이름을 생략하고 ::로 참조를 바로 시작한다.  
+::salute라는 멤버 참조를 run 라이브러리 함수에 넘긴다(run은 인자로 받은 람다를 호출한다).
+
+람다가 인자가 여럿인 다른 함수한테 작업을 위임하는 경우 람다를 정의하지 않고 직접 위임 함수에 대한 참조를 제공하면 편리하다.
+
+```kotlin
+val action = { person: Person, message: String ->   // 이 람다는 sendEmail 함수에게 작업을 위임한다.
+    sendEmail(person, message)
+}
+val nextAction = ::sendEmail    // 람다 대신 멤버 참조를 쓸 수 있다.
+```
+
+생성자 참조를 사용하면 클래스 생성 작업을 연기하거나 저장해둘 수 있다.  
+:: 뒤에 클래스 이름을 넣으면 생성자 참조를 만들 수 있다.  
+
+```kotlin
+data class Person(val name: String, val age: Int)
+
+>>> val createPerson = ::Person // "Person"의 인스턴스를 만드는 동작을 값으로 저장한다.
+>>> val p = createPerson("Alice", 29)
+>>> println(p)
+Person(name=Alice, age=29)
+```
+
+확장 함수도 멤버 함수와 똑같은 방식으로 참조할 수 있다는 점을 기억하라.
+
+```kotlin
+fun Person.isAdult() = age >= 21
+val predicate = Person::isAdult
+```
+
+isAdult는 Person클래스의 멤버가 아니고 확장 함수다.  
+그렇지만 isAdult를 호출할 때 person.isAdult()로 인스턴스 멤버 호출 구문을 쓸 수 있는 것처럼 Person::isAdult로 멤버 참조 구문을 사용해 이 확장 함수에 대한 참조를 얻을 수 있다.
+
+> #### 바운드 멤버 참조
+> 코틀린 1.0에서는 클래스의 메소드나 프로퍼티에 대한 참조를 얻은 다음에 그 참조를 호출할 때 항상 인스턴스 객체를 제공해야 했다.  
+코틀린 1.1부터는 바운드 멤버 참조(bound member reference)를 지원한다.  
+바운드 멤버 참조를 사용하면 멤버 참조를 생성할 때 클래스 인스턴스를 함께 저장한 다음 나중에 그 인스턴스에 대해 멤버를 호출해준다.  
+따라서 호출 시 수신 대상 객체를 별도로 지정해 줄 필요가 없다.  
+>
+> ```kotlin
+> >>> val p = Person("Dmitry", 34)
+> >>> val personsAgeFunction = Person::age
+> >>> println(personsAgeFunction(p))
+> 34
+> >>> val dmitrysAgeFunction = p::age    // 코틀린 1.1부터 사용할 수 있는 바운드 멤버 참조
+> >>> println(dmitrysAgeFunction())
+> 34
+> ```
+>
+> 여기서 personsAgeFunction은 인자가 하나(인자로 받은 사람의 나이를 반환)이지만, dmitrysAgeFunction은 인자가 없는(참조를 만들 때 p가 가리키던 사람의 나이를 반환) 함수라는 점에 유의하라.  
+코틀린 1.0에서는 p::age 대신에 { p.age } 라고 직접 객체의 프로퍼티를 돌려주는 람다를 만들어야만 한다.
+
+## 컬렉션 함수형 API
+
+함수형 프로그래밍 스타일을 사용하면 컬렉션을 다룰 때 편리하다.  
+대부분의 작업에 라이브러리 함수를 활용할 수 있고 그로 인해 코드를 아주 간결하게 만들 수 있다.  
+이번 절에서는 컬렉션을 다루는 코틀린 표준 라이브러리를 몇 가지 살펴본다.
+
+### - 필수적인 함수: filter와 map
+
+filter와 map은 컬렉션을 활용할 때 기반이 되는 함수다.  
+대부분의 컬렉션 연산을 이 두 함수를 통해 표현할 수 있다.  
+
+```kotlin
+data class Person(val name: String, val age: Int)
+```
+
+filter 함수는 컬렉션을 이터레이션하면서 주어진 람다에 각 원소를 넘겨서 람다가 true를 반환하는 원소만 모은다.  
+
+```kotlin
+>>> val list = listOf(1, 2, 3, 4)
+>>> println(list.filter{ it % 2 == 0 })
+[2, 4]
+```
+
+결과는 입력 컬렉션의 원소 중에서 주어진 술어를 만족하는 원소만으로 이뤄진 새로운 컬렉션이다.  
+
+![](./05fig03.jpg)
+
+```kotlin
+>>> val people = listOf(Person("Alice", 29), Person("Bob", 31))
+>>> println(people.filter { it.age > 30 })
+[Person(name=Bob, age=31)]
+```
+
+filter 함수는 컬렉션에서 원치 않는 원소를 제거한다.  
+하지만 filter는 원소를 변환할 수 는 없다.  
+원소를 변환하려면 map 함수를 사용해야 한다.  
+
+map 함수는 주어진 람다를 컬렉션의 각 원소에 적용한 결과를 모아서 새 컬렉션을 만든다.  
+
+```kotlin
+>>> val list = listOf(1, 2, 3, 4)
+>>> println(list.map { it * it })
+[1, 4, 9, 16]
+```
+
+![](./05fig04.jpg)
+
+사람의 리스트가 아니라 이름의 리스트를 출력하고 싶다면 map으로 사람의 리스트를 이름의 리스트로 변환하면 된다.  
+
+```kotlin
+>>> val people = listOf(Person("Alice", 29), Person("Bob", 31))
+>>> println(people.map { it.name })
+[Alice, Bob]
+```
+
+```kotlin
+people.map(Person::name)
+```
+
+30살 이상인 사람의 이름 출력
+
+```kotlin
+>>> people.filter { it.age > 30 }.map(Person::name)
+[Bob]
+```
+
+가장 나이 많은 사람의 이름 출력
+
+```kotlin
+people.filter { it.age == people.maxBy(Person::age)!!.age }
+```
+
+하지만 위 코드는 목록에서 최댓값을 구하는 작업을 계속 반복한다는 단점이 있다.
+
+```kotlin
+val maxAge = people.maxBy(Person::age)!!.age
+people.filter { it.age == maxAge }
+```
+
+필터와 변환 함수를 맵에 적용할 수도 있다.
+
+```kotlin
+>>> val numbers = mapOf(0 to "zero", 1 to "one")
+>>> println(numbers.mapValues { it.value.toUpperCase() })
+{0=ZERO, 1=ONE}
+```
+
+### - all, any, count, find: 컬렉션에서 술어 적용
+
+컬렉션에 대해 자주 수행하는 연산으로 컬렉션의 모든 원소가 어떤 조건을 만족하는지 판단하는(또는 그 변종으로 컬렉션 안에 어떤 조건을 만족하는 원소가 있는지 판단하는) 연산이 있다.  
+코틀린에서는 all과 any가 이런 연산이다.  
+count 함수는 조건을 만족하는 원소의 개수를 반환하며, find 함수는 조건을 만족하는 첫 번째 원소를 반환한다.  
+
+어떤 사람의 나이가 27살 이하인지 판단
+
+```kotlin
+val canBeInClub27 = { p: Person -> p.age <= 27 }
+```
+
+모든 원소가 이 술어를 만족하는지 궁금하다면 all 함수를 쓴다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.all(canBeInClub27))
+false
+```
+
+술어를 만족하는 원소가 하나라도 있는지 궁금하면 any를 쓴다.
+
+```kotlin
+>>> println(people.any(canBeInClub27))
+true
+```
+
+어떤 조건에 대해 !all을 수행한 결과와 그 조건의 부정에 대해 any를 수행한 결과는 같다(드모르간의 법칙).  
+또 어떤 조건에 대해 !any를 수행한 결과와 그 조건의 부정에 대해 all을 수행한 결과도 같다.  
+가독성을 높이려면 !를 붙이지 않는 편이 낫다.
+
+```kotlin
+>>> val list = listOf(1, 2, 3)
+>>> println(!list.all { it == 3 })
+true
+>>> println(list.any { it != 3 } )
+true
+```
+
+술어를 만족하는 원소의 개수를 구하려면 count를 사용한다.  
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.count(canBeInClub27))
+1
+```
+
+> #### 함수를 적재적소에 사용하라: count와 size
+> count가 있다는 사실을 잊어버리고, 컬렉션을 필터링한 결과의 크기를 가져오는 경우가 있다.  
+>
+> ```kotlin
+> >>> println(people.filter(canBeInClub27).size)
+> 1
+> ```
+>
+> 하지만 이렇게 처리하면 조건을 만족하는 모든 원소가 들어가는 중간 컬렉션이 생긴다.  
+반면 count는 조건을 만족하는 원소의 개수만을 추적하지 조건을 만족하는 원소를 따로 저장하지 않는다.  
+따라서 count가 훨씬 더 효율적이다.
+여러분의 필요에 따라 가장 적합한 연산을 선택하기 위해 최대한 노력하라!
+
+술어를 만족하는 원소를 하나 찾고 싶으면 find 함수를 사용한다.
+
+```kotlin
+>>> val people = listOf(Person("Alice", 27), Person("Bob", 31))
+>>> println(people.find(canBeInClub27))
+Person(name=Alice, age=27)
+```
+
+이 식은 조건을 만족하는 원소가 하나라도 있는 경우 가장 먼저 조건을 만족한다고 확인된 원소를 반환하며, 만족하는 원소가 전혀 없는 경우 null을 반환한다.  
+find는 firstOfNull과 같다.  
+조건을 만족하는 원소가 없으면 null이 나온다는 사실을 더 명확히 하고 싶다면 firstOrNull을 쓸 수 있다.  
+
+### - groupBy: 리스트를 여러 그룹으로 이뤄진 맵으로 변경
+
+컬렉션의 모든 원소를 어떤 특성에 따라 여러 그룹으로 나누고 싶다고 하자.  
+예를 들어 사람의 나이에 따라 분류해보자.  
+특성을 파라미터로 전달하면 컬렉션을 자동으로 구분해주는 함수가 있으면 편리할 것이다.  
+groupBy 함수가 그런 역할을 한다.  
+
+```kotlin
+>>> val people = listOf(Person("Alice", 31), Person("Bob", 29), Person("Carol", 31))
+>>> println(people.groupBy { it.age })
+```
+
+이 연산의 결과는 컬렉션의 원소를 구분하는 특성(age)이고, 키 값에 따른 각 그룹(Person 객체의 모임)이 모인 값이 맵이다.
+
+![](./05fig05_alt.jpg)
+
+출력은 다음과 같다.
+
+```kotlin
+{29=[Person(name=Bob, age=29)],
+ 31=[Person(name=Alice, age=31), Person(name=Carol, age=31)]}
+```
+
+각 그룹은 리스트다.  
+따라서 groupBy의 결과 타입은 Map<Int, List<Person>>이다.  
+
+```kotlin
+>>> val list = listOf("a", "ab", "b")
+>>> println(list.groupBy(String::first))
+{a=[a, an], b=[b]}
+```
+
+first는 String의 멤버가 아니라 확장 함수지만 여전히 멤버 참조를 사용해 first에 접근할 수 있다.  
+
+### - flatMap과 flatten: 중첩된 컬렉션 안의 원소 처리
+
+Book으로 표현한 책에 대한 정보를 저장하는 도서관이 있다고 가정하자.
+
+```kotlin
+class Book(val title: String, val authors: List<String>)
+```
+
+책마다 저자가 한 명 또는 여러 명 있다.  
+도서관에 있는 책의 저자를 모두 모은 집합을 다음과 같이 가져올 수 있다.  
+
+```kotlin
+books.flatMap { it.authors }.toSet()    // books 컬렉션에 있는 책을 쓴 모든 저자의 집합
+```
+
+flatMap 함수는 먼저 인자로 주어진 람다를 컬렉션의 모든 객체에 적용하고(또는 매핑하기) 람다를 적용한 결과 얻어지는 여러 리스트를 한 리스트로 한데 모은다(또는 펼치기(flatten)).  
+
+```kotlin
+>>> val strings = listOf("abc", "def")
+>>> println(strings.flatMap { it.toList() })
+[a, b, c, d, e, f]
+```
+
+![](./05fig06.jpg)
+
+toList 함수를 문자열에 적용하면 그 문자열에 속한 모든 문자로 이뤄진 리스트가 만들어진다.  
+map과 toList를 함께 사용하면 그림의 가운데 줄에 표현한 것처럼 문자로 이뤄진 리스트로 이뤄진 리스트가 생긴다.  
+flatMap 함수는 다음 단계로 리스트의 리스트에 들어있던 모든 원소로 이뤄진 단일 리스트를 반환한다.  
+
+```kotlin
+>>> val books = listOf(Book("Thursday Next", listOf("Jasper Fforde")),
+...                    Book("Mort", listOf("Terry Pratchett")),
+...                    Book("Good Omens", listOf("Terry Pratchett",
+...                                              "Neil Gaiman")))
+>>> println(books.flatMap { it.authors }.toSet())
+[Jasper Fforde, Terry Pratchett, Neil Gaiman]
+```
+
+toSet은 flatMap의 결과 리스트에서 중복을 없애고 집합으로 만든다.  
+
+## 지연 계산(lazy) 컬렉션 연산
+
+앞 절에서는 map이나 filter 같은 몇 가지 컬렉션 함수를 살펴봤다.  
+그런 함수는 결과 컬렉션을 즉시 생성한다.  
+이는 컬렉션 함수를 연쇄하면 매 단계마다 계산 중간 결과를 새로운 컬렉션에 임시로 담는다는 말이다.  
+__시퀀스__ 를 사용하면 중간 임시 컬렉션을 사용하지 않고도 컬렉션 연산을 연쇄할 수 있다.
+
+```kotlin
+people.map(Person::name).filter { it.startsWith("A") }
+```
+
+코틀린 표준 라이브러리 참조 문서에는 filter와 map이 리스트를 반환한다고 써있다.  
+이는 이 연쇄 호출이 리스트를 2개 만든다는 뜻이다.  
+한 리스트는 filter의 결과를 담고, 다른 하나는 map의 결과를 담는다.  
+원본 리스트에 원소가 2개밖에 없다면 리스트가 2개 더 생겨도 큰 문제가 되지 않겠지만, 원소가 수백만 개가 되면 훨씬 더 효율이 떨어진다.  
+
+이를 더 효율적으로 만들기 위해서는 각 연산이 컬렉션을 직접 사용하는 대신 시퀀스를 사용하게 만들어야 한다.  
+
+```kotlin
+people.asSequence() // 원본 컬렉션을 시퀀스로 변환한다.
+    .map(Person::name)
+    .filter { it.startWith("A") }
+    .toList()   // 결과 시퀀스를 다시 리스트로 변환한다.
+```
+
+중간 결과를 저장하는 컬렉션이 생기지 않기 때문에 원소가 많은 경우 성능이 눈에 띄게 좋아진다.  
+
+코틀린 지연 계산 시퀀스는 `Sequence` 인터페이스에서 시작한다.  
+이 인터페이스는 단지 한 번에 하나씩 열거될 수 있는 원소의 시퀀스를 표현할 뿐이다.  
+`Sequence` 안에는 `iterator`라는 단 하나의 메소드가 있다.  
+그 메소드를 통해 시퀀스로부터 원소 값을 얻을 수 있다.  
+
+`Sequence` 인터페이스의 강점은 그 인터페이스 위에 구현된 연산이 계산을 수행하는 방법 때문에 생긴다.  
+시퀀스의 원소는 필요할 때 비로소 계산된다.  
+따라서 중간 처리 결과를 저장하지 않고도 연산을 연쇄적으로 적용해서 효율적으로 계산을 수행할 수 있다.  
+
+`asSequence` 확장 함수를 호출하면 어떤 컬렉션이든 시퀀스로 바꿀 수 있다.  
+시퀀스를 리스트로 만들 때는 `toList`를 사용한다.  
+
+왜 시퀀스를 다시 컬렉션으로 되돌려야 할까?  
+시퀀스의 원소를 차례로 이터레이션해야 한다면 시퀀스를 직접 써도 된다.  
+하지만 시퀀스의 원소를 인덱스를 사용해 접근하는 등의 다른 API 메소드가 필요하다면 시퀀스를 리스트로 변환해야 한다.  
+
+> #### 📝Note
+> 큰 컬렉션에 대해서 연산을 연쇄시킬 때는 시퀀스를 적용하는 것을 규칙으로 삼아라.  
+중간 컬렉션을 생성함에도 불구하고 코틀린에서 즉시 계산 컬렉션에 대한 연산이 더 효율적인 이유를 나중에 설명한다.  
+하지만 컬렉션에 들어있는 원소가 많으면 중간 원소를 재배열하는 비용이 커지기 때문에 지연 계산이 더 낫다.  
+
+시퀀스에 대한 연산을 지연 계산하기 때문에 정말 계산을 실행하게 만들려면 최종 시퀀스의 원소를 하나씩 이터레이션하거나 최종 시퀀스를 리스트로 변환해야 한다.  
+
+### - 시퀀스 연산 실행: 중간 연산과 최종 연산
+
