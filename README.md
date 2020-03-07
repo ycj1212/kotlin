@@ -3705,3 +3705,166 @@ OnClickListener를 구현하는 객체 선언을 통해 리스너를 만들 수�
 
 또한 함수형 인터페이스를 요구하는 메소드를 호출할 때 대부분의 SAM 변환을 컴파일러가 자동으로 수행할 수 있지만, 가끔 오버로드한 메소드 중에서 어떤 타입의 메소드를 선택해 람다를 변환해 넘겨줘야 할지 모호한 때가 있다.  
 그런 경우 명시적으로 SAM 생성자를 적용하면 컴파일 오류를 피할 수 있다.  
+
+## 수신 객체 지정 람다: with와 apply
+
+자바의 람다에는 없는 코틀린 람다의 독특한 기능은 바로 수신 객체를 명시하지 않고 람다의 본문 안에서 다른 객체의 메소드를 호출할 수 있게 하는 것이다.  
+그런 람다를 수신 객체 지정 람다(lambda with receiver)라고 부른다.  
+
+### - with 함수
+
+어떤 객체의 이름을 반복하지 않고도 그 객체에 대해 다양한 연산을 수행할 수 있다.
+
+```kotlin
+fun alphabet(): String {
+    val result = StringBuilder()
+    for (letter in 'A'..'Z') {
+        result.append(letter)
+    }
+    result.append("\nNow I know the alphabet!")
+    return result.toString()
+}
+
+>>> println(alphabet())
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+Now I know the alphabet!
+```
+
+```kotlin
+fun alphabet(): String {
+    val stringBuilder = StringBuilder()
+    return with(stringBuilder) {    // 메소드를 호출하려는 수신 객체를 지정한다.
+        for (letter in 'A'..'Z') {
+            this.append(letter) // "this"를 명시해서 앞에서 지정한 수신 객체의 메소드를 호출한다.
+        }
+        append("\nNow I know the alphabet!")    // "this"를 생략하고 메소드를 호출한다.
+        this.toString() // 람다에서 값을 반환한다.
+    }
+}
+```
+
+with문은 파라미터가 2개 있는 함수다.  
+첫 번째 파라미터는 stringBuilder이고, 두 번째 파라미터는 람다다.  
+람다를 괄호 밖으로 빼내는 관례를 사용함에 따라 전체 함수 호출이 언어가 제공하는 특별 구문처럼 보인다.  
+물론 이 방식 대신 `with(stringBuilder, { ... })`라고 쓸 수도 있지만 더 읽기 나빠진다.  
+
+with 함수는 첫 번째 인자로 받은 객체를 두 번째 인자로 받은 람다의 수신 객체로 만든다.  
+인자로 받은 람다 본문에서는 this를 사용해 그 수신 객체에 접근할 수 있다.  
+
+위 코드에서 this는 with의 첫 번째 인자로 전달된 stringBuilder다.  
+stringBuilder의 메소드를 this.append(letter)처럼 this 참조를 통해 접근하거나 append("\nNow...") 처럼 바로 호출할 수 있다.  
+
+> #### 수신 객체 지정 람다와 확장 함수 비교
+> this가 함수의 수신 객체를 가리키는 비슷한 개념을 떠올린 독자가 있을지도 모르겠다.  
+확장 함수 안에서 this는 그 함수가 확장하는 타입의 인스턴스를 가리킨다.  
+그리고 그 수신 객체의 this의 멤버를 호출할 때는 this.를 생략할 수 있다.  
+>
+> 어떤 의미에서는 확장 함수를 수신 객체 지정 함수라고 할 수도 있다.  
+>
+> 일반 함수 | 일반 람다
+> -|-
+> 확장함수 | 수신 객체 지정 람다
+>
+> 람다는 일반 함수와 비슷한 동작을 정의하는 한 방법이다.  
+수신 객체 지정 람다는 확장 함수와 비슷한 동작을 정의하는 한 방법이다.  
+
+앞의 alphabet 함수를 더 리팩토링해서 불필요한 stringBuilder 변수를 없앨 수도 있다.  
+
+```kotlin
+fun alphabet() = with(StringBuilder()) {
+    for (letter in 'A'..'Z') {
+        append(letter)
+    }
+    append("\nNow I know the alphabet!")
+    toString()
+}
+```
+
+불필요한 stringBuilder 변수를 없애면 alphabet 함수가 식의 결과를 바로 반환하게 된다.  
+따라서 식을 본문으로 하는 함수로 표현할 수 있다.  
+StringBuilder의 인스턴스를 만들고 즉시 with에게 인자로 넘기고, 람다 안에서 this를 사용해서 그 인스턴스를 참조한다.  
+
+> #### 메소드 이름 충돌
+> with에게 인자로 넘긴 객체의 클래스와 with를 사용하는 코드가 들어있는 클래스 안에 이름이 같은 메소드가 있으면 무슨 일이 생길까?  
+그런 경우 this 참조 앞에 레이블을 붙이면 호출하고 싶은 메소드를 명확하게 정할 수 있다.  
+alphabet 함수가 OuterClass의 메소드라고 하자.  
+StringBuilder가 아닌 바깥쪽 클래스(OuterClass)에 정의된 toString을 호출하고 싶다면 다음과 같은 구문을 사용해야 한다.  
+`this@OuterClass.toString()`
+
+with가 반환하는 값은 람다 코드를 실행한 결과며, 그 결과는 람다 식의 본문에 있는 마지막 식의 값이다.  
+하지만 때로는 람다의 결과 대신 수신 객체가 필요한 경우도 있다.  
+그럴 때는 apply 라이브러리 함수를 사용할 수 있다.  
+
+### - apply 함수
+
+apply 함수는 거의 with와 같다.  
+유일한 차이란 apply는 항상 자신에게 전달된 객체(즉 수신 객체)를 반환한다는 점뿐이다.  
+apply를 써서 alphabet 함수를 다시 리팩토링해보자.  
+
+```kotlin
+fun alphabet() = StringBuilder().apply {
+    for (letter in 'A'..'Z') {
+        append(letter)
+    }
+    append("\nNow I know the alphabet!")
+}.toString()
+```
+
+apply는 확장 함수로 정의돼 있다.  
+apply의 수신 객체가 전달받은 람다의 수신 객체가 된다.  
+이 함수에서 apply를 실행한 결과는 StringBuilder 객체다.  
+따라서 그 객체의 toString을 호출해서 String 객체를 얻을 수 있다.  
+
+이런 apply 함수는 객체의 인스턴스를 만들면서 즉시 프로퍼티 중 일부를 초기화해야 하는 경우 유용하다.  
+자바에서는 보통 별도의 Builder 객체가 이런 역할을 담당한다.  
+코틀린에서는 어떤 클래스가 정의돼 있는 라이브러리의 특별한 지원 없이도 그 클래스 인스턴스에 대해 apply를 활용할 수 있다.  
+
+```kotlin
+fun createViewWithCustomAttributes(context: Context) =
+    TextView(context).apply {
+        text = "Sample Text"
+        textSize = 20.0
+        setPadding(10, 0, 0, 0)
+    }
+```
+
+apply 함수를 사용하면 함수의 본문에 간결한 식을 사용할 수 있다.  
+새로운 TextView 인스턴스를 만들고 즉시 그 인스턴스를 apply에 넘긴다.  
+apply에 전달된 람다 안에서는 TextView가 수신 객체가 된다.  
+따라서 원하는 대로 TextView의 메소드를 호출하거나 프로퍼티를 설정할 수 있다.  
+람다를 실행하고 나면 apply는 람다에 의해 초기화된 TextView 인스턴스를 반환한다.  
+그 인스턴스는 createViewWithCustomAttributes 함수의 결과가 된다.  
+
+with와 apply는 수신 객체 지정 람다를 사용하는 일반적인 예제 중 하나다.  
+더 구체적인 함수를 비슷한 패턴으로 활용할 수 있다.  
+예를 들어 표준 라이브러리의 builderString 함수를 사용하면 alphabet 함수를 더 단순화할 수 있다.  
+buildString은 앞에서 살펴본 alphabet 코드에서 StringBuilder 객체를 만드는 일과 toString을 호출해주는 일을 알아서 해준다.  
+buildString의 인자는 수신 객체 지정 람다며, 수신 객체는 항상 StringBuilder가 된다.  
+
+```kotlin
+fun alphabet() = buildString {
+    for (letter in 'A'..'Z') {
+        append(letter)
+    }
+    append("\nNow I know the alphabet!")
+}
+```
+
+buildString 함수는 StringBuilder를 활용해 String을 만드는 경우 사용할 수 있는 우아한 해법이다.  
+
+## 요약
+
+- 람다를 사용하면 코드 조각을 다른 함수에게 인자로 넘길 수 있다.  
+- 코틀린에서는 람다가 함수 인자인 경우 괄호 밖으로 람다를 빼낼 수 있고, 람다의 인자가 단 하나뿐인 경우 인자 이름을 지정하지 않고 it이라는 디폴트 이름으로 부를 수 있다.  
+- 람다 안에 있는 코드는 그 람다가 들어있는 바깥 함수의 변수를 읽거나 쓸 수 있다.  
+- 메소드, 생성자, 프로퍼티의 이름 앞에 ::을 붙이면 각각에 대한 참조를 만들 수 있다. 그런 참조를 람다 대신 다른 함수에게 넘길 수 있다.
+- filter, map, all, any 등의 함수를 활용하면 컬렉션에 대한 대부분의 연산을 직접 원소를 이터레이션하지 않고 수행할 수 있다.  
+- 시퀀스를 사용하면 중간 결과를 담는 컬렉션을 생성하지 않고도 컬렉션에 대한 여러 연산을 조합할 수 있다.  
+- 함수형 인터페이스(추상 메소드가 단 하나뿐인 SAM 인터페이스)를 인자로 받는 자바 함수를 호출할 경우 람다를 함수형 인터페이스 인자 대신 넘길 수 있다.  
+- 수신 객체 지정 람다를 사용하면 람다 안에서 미리 정해둔 수신 객체의 메소드를 직접 호출할 수 있다.  
+- 표준 라이브러리 with 함수를 사용하면 어떤 객체에 대한 참조를 반복해서 언급하지 않으면서 그 객체의 메소드를 호출할 수 있다. apply를 사용하면 어떤 객체라도 빌더 스타일의 API를 사용해 생성하고 초기화할 수 있다.
+
+---
+
+# 코틀린 타입 시스템
+
