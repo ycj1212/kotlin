@@ -3868,3 +3868,203 @@ buildString 함수는 StringBuilder를 활용해 String을 만드는 경우 사�
 
 # 코틀린 타입 시스템
 
+- 널이 될 수 있는 타입  
+- 읽기 전용 컬렉션
+
+코틀린은 자바 타입 시스템에서 불필요하거나 문제가 되던 부분을 제거했다.  
+
+## 널 가능성
+
+널 가능성은 NullPointerException 오류를 피할 수 있게 돕기 위한 코틀린 타입 시스템의 특성이다.  
+코틀린을 비롯한 최신 언어에서 null에 대한 접근 방법은 가능한 이 문제를 _실행 시점에서 컴파일 시점으로_ 옮기는 것이다.  
+널이 될 수 있는지 여부를 타입 시스템에 추가함으로써 컴파일러가 여러 가지 오류를 컴파일 시 미리 감지해서 실행 시점에 발생할 수 있는 예외의 가능성을 줄일 수 있다.  
+
+### - 널이 될 수 있는 타입
+
+코틀린과 자바의 첫 번째이자 가장 중요한 차이는 코틀린 타입 시스템이 널이 될 수 있는 타입을 명시적으로 지원한다는 점이다.  
+널이 될 수 있는 타입은 프로그램 안의 프로퍼티나 변수에 null을 허용하게 만드는 방법이다.  
+어떤 변수가 널이 될 수 있다면 그 변수에 대해 메소드를 호출하면 NullPointerException이 발생할 수 있으므로 안전하지 않다.  
+코틀린은 그런 메소드 호출을 금지함으로써 많은 오류를 방지한다.  
+
+```java
+/* 자바 */
+int strLen(String s) {
+    return s.length();
+}
+```
+
+이 함수에 null을 넘기면 NullPointerException이 발생한다.  
+
+코틀린에서 이런 함수를 작성할 때 가장 먼저 답을 알아야 할 질문은 "이 함수가 널을 인자로 받을 수 있는가?"이다.  
+여기서 널을 인자로 받을 수 있다는 말은 strLen(null)처럼 직접 null 리터럴을 사용하는 경우뿐 아니라 변수나 식의 값이 실행 시점에 null이 될 수 있는 경우를 모두 포함한다.  
+
+널이 인자로 들어올 수 없다면 코틀린에서는 다음과 같이 함수를 정의할 수 있다.  
+
+```kotlin
+fun strLen(s: String) = s.length
+```
+
+strLen에 null이거나 널이 될 수 있는 인자를 넘기는 것은 금지되며, 혹시 그런 값을 넘기면 컴파일 시 오류가 발생한다.  
+
+```kotlin
+>>> strLen(null)
+ERROR: Null can not be a value of a non-null type String
+```
+
+strLen 함수에서 파라미터 s의 타입은 String인데 코틀린에서 이는 s가 항상 String의 인스턴스여야 한다는 뜻이다.  
+이때 컴파일러는 널이 될 수 있는 값을 strLen에게 인자로 넘기지 못하게 막는다.  
+따라서 strLen 함수가 결코 시랭 시점에 NullPointerException을 발생시키지 않으리라 장담할 수 있다.  
+
+이 함수가 널과 문자열을 인자로 받을 수 있게 하려면 타입 이름 뒤에 물음표(?)를 명시해야 한다.  
+
+```kotlin
+fun strLenSafe(s: String?) = ...
+```
+
+타입 이름 뒤에 물음표를 붙이면 그 타입의 변수나 프로퍼티에 null 참조를 저장할 수 있다는 뜻이다.  
+
+![](./images/06fig01.jpg)
+
+널이 될 수 있는 타입의 변수가 있다면 그에 대해 수행할 수 있는 연산이 제한된다.  
+`변수.메소드()` 직접 호출XX
+
+```kotlin
+>>> fun strLenSafe(s: String?) = s.length()
+ERROR: only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type kotlin.String?
+```
+
+널이 될 수 있는 값을 널이 될 수 없는 타입의 변수에 대입할 수 없다.  
+
+```kotlin
+>>> val x: String? = null
+>>> var y: String = x
+ERROR: Type mismatch: inferred type is String? but String was expected
+```
+
+널이 될 수 있는 타입의 값을 널이 될 수 없는 타입의 파라미터를 받는 함수에 전달할 수 없다.  
+
+```kotlin
+>>> strLen(x)
+ERROR: Type mismatch: inferred type is String? but String was expected
+```
+
+null과 비교하고 나면 컴파일러는 그 사실을 기억하고 null이 아님이 확실한 영역에서는 해당 값을 널이 될 수 없는 타입의 값처럼 사용할 수 있다.  
+
+```kotlin
+fun strLenSafe(s: String?): Int =
+    if (s != null) s.length else 0  // null 검사를 추가하면 코드가 컴파일된다.
+
+>>> val x: String? = null
+>>> println(strLenSafe(x))
+0
+>>> println(strLenSafe("abc"))
+3
+```
+
+### - 타입의 의미
+
+타입이란 무엇이고 왜 변수에 타입을 지정해야 하는 걸까?  
+"타입은 분류로... 타입은 어떤 값들이 가능한지와 그 타입에 대해 수행할 수 있는 연산의 종류를 결정한다."
+
+자바 타입 중 double은 64비트 부동소수점 수다.  
+double 타입의 값에 대해 일반 수학 연산을 사용할 수 있다.  
+따라서 double 타입의 변수가 있고 그 변수에 대한 연산을 컴파일러가 통과시킨 경우 그 연산이 성공적으로 실행되리란 사실을 확신할 수 있다.  
+
+자바에서 String 타입의 변수에는 String이나 null이라는 두 가지 종류의 값이 들어갈 수 있다.  
+이 두 종류의 값은 서로 완전히 다르다.  
+자바 instanceof 연산자도 null이 String이 아니라고 답한다.  
+두 종류의 값에 대해 실행할 수 있는 연산도 완전히 다르다.  
+실제 String이 들어있는 변수에 대해서는 String 클래스에 정의된 모든 메소드를 호출할 수 있다.  
+하지만 null이 들어있는 경우에는 사용할 수 있는 연산이 많지 않다.  
+
+이는 자바의 타입 시스템이 널을 제대로 다루지 못한다는 뜻이다.  
+변수에 선언된 타입이 있지만 널 여부를 추가로 검사하기 전에는 그 변수에 대해 어떤 연산을 수행할 수 있을지 알 수 없다.  
+
+> #### NullPointerException 오류를 다루는 다른 방법
+> 자바에도 NullPointerException 문제를 해결하는 데 도움을 주는 도구가 있다.  
+예를 들어 애노테이션을 사용해 값이 널이 될 수 있는지 여부를 표시(@Nullable 이나 @NotNull)하기도 한다.  
+이런 애노테이션을 활용해 NullPointerException이 발생할 수 있는 위치를 찾아주는 도구가 있다.  
+하지만 그런 도구는 표준 자바 컴파일 절차의 일부가 아니기 때문에 일관성 있게 적용된다는 보장을 할 수 없다.  
+또한 오류가 발생할 위치를 정확하게 찾기 위해 라이브러리를 포함하는 모든 코드베이스에 애노테이션을 추가하는 일도 쉽지는 않다.  
+젯브레인스에서 우리가 경험한 바로는 자바에서 가장 널리 쓰이는 널 가능성 관련 애노테이션으로도 모든 NPE 문제를 해결할 수는 없었다.  
+>
+> 이 문제를 해결하는 다른 방법은 null 값을 코드에서 절대로 쓰지 않는 것이다.  
+null 대신 자바8에 새로 도입된 Optional 타입 등의 null을 감싸는 특별한 래퍼 타입을 활용할 수 있다.  
+Optional은 어떤 값이 정의되거나 정의되지 않을 수 있음을 표현하는 타입이다.  
+이런 해법에는 몇 가지 단점이 있다.  
+코드가 더 지저분해지고 래퍼가 추가됨에 따라 실행 시점에 성능이 저하되며 전체 에코시스템에서 일관성 있게 활용하기 어렵다.  
+여러분이 작성한 코드에서는 Optional을 사용하더라도 여전히 JDK 메소드나 안드로이드 프레임워크, 다른 서드파티 라이브러리 등에서 반환되는 null을 처리해야 한다.  
+
+코틀린의 널이 될 수 있는 타입은 이런 문제에 대해 종합적인 해법을 제공한다.  
+널이 될 수 있는 타입과 널이 될 수 없는 타입을 구분하면 각 타입의 값에 대해 어떤 연산이 가능할지 명확히 이해할 수 있고, 실행 시점에 예외를 발생시킬 수 있는 연산을 판단할 수 있다.  
+따라서 그런 연산을 아예 금지시킬 수 있다.  
+
+> #### 📝Note  
+> 실행 시점에 널이 될 수 있는 타입이나 널이 될 수 없는 타입의 객체는 같다.  
+널이 될 수 있는 타입은 널이 될 수 없는 타입을 감싼 래퍼 타입이 아니다.  
+모든 검사는 컴파일 시점에 수행된다.  
+따라서 코틀린에서는 널이 될 수 있는 타입을 처리하는 데 별도의 실행 시점 부가 비용이 들지 않는다.  
+
+### - 안전한 호출 연산자: ?.
+코틀린이 제공하는 가장 유용한 도구 중 하나가 안전한 호출 연산자인 ?.이다.  
+?.은 null 검사와 메소드 호출을 한 번의 연산으로 수행한다.  
+예를 들어 `s?.toUpperCase()`는 훨씬 더 복잡한 `if (s != null) s.toUpperCase() else null`과 같다.
+
+호출하려는 값이 null아 아니라면 ?.은 일반 메소드 호출처럼 작동한다.  
+호출하려는 값이 null이면 이 호출은 무시되고 null이 결과 값이 된다.  
+
+![](./images/06fig02.jpg)
+
+`String.toUpperCase`는 String 타입의 값을 반환하지만 s가 널이 될 수 있는 타입인 경우 `s?.toUpperCase()` 식의 결과 타입은 String?이다.
+
+```kotlin
+fun printAllCaps(s: String?) {
+    val allCaps: String? = s?.toUpperCase() // allCaps는 널일 수도 있다.
+    println(allCaps)
+}
+
+>>> printAllCaps("abc")
+ABC
+>>> printAllCaps(null)
+null
+```
+
+메소드 호출뿐 아니라 프로퍼티를 읽거나 쓸 때도 안전한 호출을 사용할 수 있다.  
+
+```kotlin
+class Employee(val name: String, val manager: Employee?)
+fun managerName(employee: Employee): String? = employee.manager?.name
+
+>>> val ceo = Employee("Da Boss", null)
+>>> val developer = Employee("Bob Smith", ceo)
+>>> println(managerName(developer))
+Da Boss
+>>> println(managerName(ceo))
+null
+```
+
+객체 그래프에서 널이 될 수 있는 중간 객체가 여럿있다면 한 식 안에서 안전한 호출을 연쇄해서 함께 사용하면 편할 때가 자주 있다.  
+예를 들어 어떤 사람에 대한 정보와 그 사람이 다니는 회사에 대한 정보, 그리고 그 회사의 주소에 대한 정보를 각각 다른 클래스로 표현한다고 가정하자.  
+회사나 주소는 모두 생략 가능하다.  
+?. 연산자를 사용하면 다른 추가 검사 없이 Person의 회사 주소에서 country 프로퍼티를 단 한줄로 가져올 수 있다.  
+
+```kotlin
+class Address(val streetAddress: String, val zipCode: Int, val city: String, val country: String)
+class Company(val name: String, val address: Address?)
+class Person(val name: String, val company: Company?)
+fun Person.countryName(): String {
+    val country = this.company?.address?.country    // 여러 안전한 호출 연산자를 연쇄해 사용한다.
+    return if (country != null) country else "Unknown"
+}
+
+>>> val person = Person("Dmitry", null)
+>>> println(preson.countryName())
+Unknown
+```
+
+위 코드에는 불필요한 동작이 들어있다.  
+맨 마지막을 보면 country가 null인지 검사해서 정상적으로 얻은 country 값을 반환하거나 null인 경우에 대응하는 "Unknown"을 반환한다.  
+코틀린을 사용하면 이런 if문도 없앨 수 있다.
+
+### - 엘비스 연산자: ?:
+
