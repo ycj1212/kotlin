@@ -4068,3 +4068,154 @@ Unknown
 
 ### - 엘비스 연산자: ?:
 
+코틀린은 null 대신 사용할 디폴트 값을 지정할 때 편리하게 사용할 수 있는 연산자를 제공한다.  
+그 연산자는 엘비스(elvis) 연산자라고 한다(널 복합(null coalescing) 연산자라는 이름도 있음).  
+엘비스 연산자는 ?: 처럼 생겼다.  
+
+```kotlin
+fun foo(s: String?) {
+    val t: Sring = s ?: ""  // "s"가 null이면 결과는 빈 문자열("")이다.
+}
+```
+
+이 연산자는 이항 연산자로 좌항을 계산한 값이 널인지 검사한다.  
+좌항 값이 널이 아니면 좌항 값을 결과로 하고, 좌항 값이 널이면 우항 값을 결과로 한다.
+
+![](./images/06fig03.jpg)
+
+엘비스 연산자를 객체가 널인 경우 널을 반환하는 안전한 호출 연산자와 함께 사용해서 객체가 널인 경우에 대비한 값을 지정하는 경우도 많다.  
+
+```kotlin
+fun strLenSafe(s: String?): Int = s?.length ?: 0
+
+>>> println(strLenSafe("abc"))
+3
+>>> println(strLenSafe(null))
+0
+```
+
+전 단락의 countryName 함수도 한 줄로 표현 가능
+
+```kotlin
+fun Person.countryName() = company?.address?.country ?: "Unknown"
+```
+
+코틀린에서는 return이나 throw 등의 연산도 식이다.  
+따라서 엘비스 연산자의 우항에 return, throw 등의 연산을 넣을 수 있고, 엘비스 연산자를 더욱 편하게 사용할 수 있다.  
+그런 경우 엘비스 연산자의 좌항이 널이면 함수가 즉시 어떤 값을 반환하거나 예외를 던진다.  
+이런 패턴은 함수의 전제 조건을 검사하는 경우 특히 유용하다.  
+
+```kotlin
+class Address(val streetAddress: String, val zipCode: Int, val city: String, val country: String)
+class Company(val name: String, val address: Address?)
+class Person(val name: String, val company: Company?)
+fun printShippingLabel(person: Person) {
+    val address = person.company?.address
+        ?: throw IllegalArgumentException("No address")   // 주소가 없으면 예외를 발생시킨다.
+    with (address) {
+        println(streetAddress)
+        println("$zipCode $city, $country")
+    }
+}
+
+>>> val address = Address("Elsestr. 47", 80687, "Munich", "Germany")
+>>> val jetbrains = Company("JetBrains", address)
+>>> val person = Person("Dmitry", jetbrains)
+
+>>> printShippingLabel(person)
+Elsestr. 47
+80687 Munich, Germany
+
+>>> printShippingLabel(Person("Alexey", null))
+java.lang.IllegalArgumentException: No address
+```
+
+printShippingLabel 함수는 모든 정보가 제대로 있으면 주소를 출력한다.  
+with 함수를 사용했기 때문에 address를 한 줄에서 네 번이나 반복하지 않아도 됐다.
+
+### - 안전한 캐스트: as?
+
+자바 타입 캐스트와 마찬가지로 대상 값을 as로 지정한 타입으로 바꿀 수 없으면 ClassCastException이 발생한다.  
+as? 연산자는 어떤 값을 지정한 타입으로 캐스트한다.  
+as?는 값을 대상 타입으로 변환할 수 없으면 null을 반환한다.
+
+![](./images/06fig04.jpg)
+
+안전한 캐스트를 사용할 때 일반적인 패턴은 캐스트를 수행한 뒤에 엘비스 연산자를 사용하는 것이다.  
+
+```kotlin
+class Person(val firstName: String, val lastName: String) {
+    override fun equals(o: Any?): Boolean {
+        val otherPerson = o as? Person ?: return false  // 타입이 서로 일치하지 않으면 false를 반환
+        return otherPerson.firstName == firstName &&    // 안전한 캐스트를 하고나면 otherPerson이 Person 타입으로 스마트 캐스트된다.
+               otherPerson.lastName == lastName
+    }
+    
+    override fun hashCode(): Int =
+        firstName.hashCode() * 37 + lastName.hashCode()
+}
+
+>>> val p1 = Person("Dmitry", "Jemerov")
+>>> val p2 = Person("Dmitry", "Jemerov")
+>>> println(p1 == p2)   // == 연산자는 "equals" 메소드를 호출한다.
+true
+>>> println(p1.equals(42))
+false
+```
+
+### - 널 아님 단언: !!
+
+널 아님 단언(not-null assertion)은 코틀린에서 널이 될 수 있는 타입의 값을 다룰 때 사용할 수 있는 도구 중에서 가장 단순하면서도 무딘 도구다.  
+느낌표를 이중으로 사용하면 어떤 값이든 널이 될 수 없는 타입으로 바꿀 수 있다.  
+실제 널에 대해 !!를 적용하면 NPE가 발생한다.
+
+![](./images/06fig05.jpg)
+
+```kotlin
+fun ignoreNulls(s: String?) {
+    val sNotNull: String = s!!  // 예외는 이 지점을 가리킨다.
+    println(sNotNull.length)
+}
+
+>>> ignoreNulls(null)
+Exception in thread "main" kotlin.KotlinNullPointerException at <...>.ignoreNulls(07_NotnullAssertions.kt:2)
+```
+
+발생한 예외는 null값을 사용하는 코드가 아니라 단언문이 위치한 곳을 가리킨다는 점에 유의하라.  
+
+> #### 📝Note
+> 아마도 !!가 약간 무례해 보인다는 사실을 눈치 챘을 것이다.  
+!! 기호는 마치 컴파일러에게 소리를 지르는 것 같은 느낌이 든다.  
+사실 이는 의도한 것이다.  
+코틀린 설계자들은 컴파일러가 검증할 수 없는 단언을 사용하기보다는 더 나은 방법을 찾아보라는 의도를 넌지시 표현하려고 !!라는 못생긴 기호를 택했다.  
+
+하지만 널 아님 단언문이 더 나은 해법인 경우도 있다.  
+어떤 함수의 값이 널인지 검사한 다음에 다른 함수를 호출한다고 해도 컴파일러는 호출된 함수 안에서 안전하게 그 값을 사용할 수 있음을 인식할 수 없다.  
+하지만 이런 경우 호출된 함수가 언제나 다른 함수에서 널이 아닌 값을 전달받는다는 사실이 분명하다면 굳이 널 검사를 다시 수행하고 싶지는 않을 것이다.  
+이럴 때 널 아님 단언문을 쓸 수 있다.  
+
+```kotlin
+class CopyRowAction(val list: JList<String>) : AbstractAction() {
+    override fun isEnabled(): Boolean =
+        list.selectedValue != null
+    override fun actionPerformed(e: ActionEvent) {  // actionPerformed는 isEnabled가 "true"인 경우에만 호출된다.
+        val value = list.selectedValue!!
+        // value를 클립보드로 복사
+    }
+}
+```
+
+이 경우 !!를 사용하지 않으려면 val value = list.selectedValue ?: return처럼 널이 될 수 없는 타입의 값을 얻어야 한다.  
+이런 패턴을 사용하면 list.selectedValue가 null이면 함수기 조기 종료되므로 함수의 나머지 본문에서는 value가 항상 널이 아니게 된다.  
+이 식에서 엘비스 연산자는 중복이라 할 수 있지만 나중에 isEnabled가 더 복잡해질 가능성에 대비해 미리 보호 장치를 마련해 둔다고 생각할 수도 있다.  
+
+!!를 널에 대해 사용해서 발생하는 예외의 스택 트레이스에는 어떤 파일의 몇 번째 줄인지에 대한 정보는 들어있지만 어떤 식에서 예외가 발생했는지에 대한 정보는 들어있지 않다.  
+어떤 값이 널이었는지 확실히 하기 위해 여러 !! 단언문을 한 줄에 함께 쓰는 일을 피하라.
+
+`person.company!!.address!!.country // 이런 식으로 코드 작성 XX`
+
+### - let 함수
+
+let 함수를 사용하면 널이 될 수 있는 식을 더 쉽게 다룰 수 있다.  
+let 함수를 안전한 호출 연산자와 함께 사용하면 원하는 식을 평가해서 결과가 널인지 검사한 다음에 그 결과를 변수에 넣는 작업을 간단한 식을 사용해 한꺼번에 처리할 수 있다.  
+
