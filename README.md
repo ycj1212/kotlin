@@ -4219,3 +4219,183 @@ class CopyRowAction(val list: JList<String>) : AbstractAction() {
 let 함수를 사용하면 널이 될 수 있는 식을 더 쉽게 다룰 수 있다.  
 let 함수를 안전한 호출 연산자와 함께 사용하면 원하는 식을 평가해서 결과가 널인지 검사한 다음에 그 결과를 변수에 넣는 작업을 간단한 식을 사용해 한꺼번에 처리할 수 있다.  
 
+let을 사용하는 가장 흔한 용례는 널이 될 수 있는 값을 널이 아닌 값만 인자로 받는 함수에 넘기는 경우다.  
+
+```kotlin
+fun sendEmailTo(email: String) { /*...*/ }
+
+>>> val email: String? = ...
+>>> sendEmailTo(email)
+ERROR: Type mismatch: inferred type is String? but String was expected
+```
+
+인자를 넘기기 전에 주어진 값이 널인지 검사해야 한다.  
+
+`if(email != null) sendEmailTo(email)`
+
+하지만 let 함수를 통해 인자를 전달할 수도 있다.  
+let 함수는 자신의 수신 객체를 인자로 전달받은 람다에게 넘긴다.  
+널이 될 수 있는 값에 대해 안전한 호출 구문을 사용해 let을 호출하되 널이 될 수 없는 타입을 인자로 받는 람다를 let에 전달한다.  
+이렇게 하면 널이 될 수 있는 타입의 값을 널이 될 수 없는 타입의 값으로 바꿔서 람다에 전달하게 된다.  
+
+![](./images/06fig06.jpg)
+
+let 함수는 이메일 주소 값이 널이 아닌 경우에만 호출된다.
+
+- `email?.let { email -> sendEmailTo(email) }`
+- `email?.let { sendEmailTo(it) }`
+
+```kotlin
+fun sendEmailTo(email: String) {
+    println("Sending email to $email")
+}
+
+>>> var email: String? = "yole@example.com"
+>>> email?.let { sendEmailTo(it) }
+Sending email to yole@example.com
+>>> email = null
+>>> email?.let { sendEmailTo(it) }
+```
+
+아주 긴 식이 있고 그 값이 널이 아닐 때 수행해야 하는 로직이 있을 때 let을 쓰면 훨씬 더 편하다.  
+let을 쓰면 긴 식의 결과를 저장하는 변수를 따로 만들 필요가 없다.  
+
+```kotlin
+val person: Person? = getTheBestPersonInTheWorld()
+if (person != null) sendEmailTo(person.email)
+```
+
+```kotlin
+getTheBestPersonInTheWorld()?.let { sendEmailTo(it.email) }
+```
+
+다음 getTheBestPersonInTheWorld() 함수는 null을 반환한다.  
+따라서 위의 람다 식은 결코 실행되지 않는다.  
+
+```kotlin
+fun getTheBestPersonInTheWorld(): Person? = null
+```
+
+여러 값이 널인지 검사해야 한다면 let 호출을 중첩시켜서 처리할 수 있지만 코드가 복잡해져서 알아보기 어려워진다.  
+그런 경우 일반적인 if를 사용해 모든 값을 한꺼번에 검사하는 편이 낫다.  
+
+### - 나중에 초기화할 프로퍼티
+
+객체 인스턴스를 일단 생성한 다음에 나중에 초기화하는 프레임워크가 많다.  
+예를 들어 안드로이드에서는 onCreate에서 액티비티를 초기화한다.  
+제이유닛에서는 @Before로 애노테이션된 메소드 안에서 초기화 로직을 수행해야만 한다.  
+
+하지만 코틀린에서 클래스 안의 널이 될 수 없는 프로퍼티를 생성자 안에서 초기화하지 않고 특별한 메소드 안에서 초기화할 수는 없다.  
+코틀린에서는 일반적으로 생성자에서 모든 프로퍼티를 초기화해야 한다.  
+게다가 프로퍼티 타입이 널이 될 수 없는 타입이라면 반드시 널이 아닌 값으로 그 프로퍼티를 초기화해야 한다.  
+그런 초기화 값을 제공할 수 없으면 널이 될 수 있는 타입을 사용할 수밖에 없다.  
+하지만 널이 될 수 있는 타입을 사용하면 모든 프로퍼티 접근에 널 검사를 넣거나 !! 연산자를 써야 한다.  
+
+```kotlin
+class MyService {
+    fun performAction(): String = "foo"
+}
+
+class MyTest {
+    private var myService: MyService ?= null    // null로 초기화하기 위해 널이 될 수 있는 타입인 프로퍼티를 선언한다.
+    
+    @Before fun setUp() {
+        myService = MyService() // setUp 메소드 안에서 진짜 초기값을 지정한다.
+    }
+    
+    @Test fun testAction() {
+        Assert.assertEquals("foo", myService!!.performAction()) // 반드시 널 가능성에 신경 써야 한다. !!나 ?을 꼭 써야 한다.
+    }
+}
+```
+
+myService 프로퍼티를 나중에 초기화할 수 있다.  
+lateinit 변경자를 붙이면 프로퍼티를 나중에 초기화할 수 있다.  
+
+```kotlin
+class MyService {
+    fun performAction(): String = "foo"
+}
+
+class MyTest {
+    private lateinit var myService: MyService   // 초기화하지 않고 널이 될 수 없는 프로퍼티를 선언한다.
+
+    @Before fun setUp() {
+        myService = MyService()
+    }
+
+    @Test fun testAction() {
+        Assert.assertEquals("foo", myService.performAction())   // 널 검사를 수행하지 않고 프로퍼티를 사용한다.
+    }
+}
+```
+
+나중에 초기화하는 프로퍼티는 항상 var 이어야 한다.  
+val 프로퍼티는 final 필드로 컴파일되며, 생성자 안에서 반드시 초기화해야 한다.  
+나중에 초기화하는 프로퍼티는 널이 될 수 없는 타입이라 해도 더 이상 생성자 안에서 초기화할 필요가 없다.  
+그 프로퍼티를 초기화하기 전에 프로퍼티에 접근하면 "lateinit property myService has not been initialized"이라는 예외가 발생한다.  
+
+> #### 📝Note
+> lateinit 프로퍼티를 의존관계 주입(DI) 프레임워크와 함께 사용하는 경우가 많다.  
+그런 시나리오는 lateinit 프로퍼티의 값을 DI 프레임워크가 외부에서 설정해준다.  
+다양한 자바 프레임워크와의 호환성을 위해 코틀린은 lateinit가 지정된 프로퍼티와 가시성이 똑같은 필드를 생성해준다.  
+어떤 프로퍼티가 public이라면 코틀린이 생성한 필드도 public이다.  
+
+### - 널이 될 수 있는 타입 확장
+
+널이 될 수 있는 타입에 대한 확장 함수를 정의하면 null 값을 다루는 강력한 도구로 활용할 수 있다.  
+어떤 메소드를 호출하기 전에 수신 객체 역할을 하는 변수가 널이 될 수 없다고 보장하는 대신, 직접 변수에 대해 메소드를 호출해도 확장 함수인 메소드가 알아서 널을 처리해준다.  
+이런 처리는 확장 함수에서만 가능하다.  
+일반 멤버 호출은 객체 인스턴스를 통해 디스패치되므로 그 인스턴스가 널인지 여부를 검사하지 않는다.  
+
+```kotlin
+fun verifyUserInput(input: String?) {
+    if (input.isNullOrBlank()) {    // 안전한 호출을 하지 않아도 된다.
+        println("Please fill in the required fields")
+    }
+}
+
+>>> verifyUserInput(" ")
+Please fill in the required fields
+>>> verifyUserInput(null)   // isNullOrBlank에 "null"을 수신객체로 전달해도 아무런 예외가 발생하지 않는다.
+Please fill in the required fields
+```
+
+안전한 호출 없이도 널이 될 수 있는 수신 객체 타입에 대해 선언된 확장 함수를 호출 가능하다.  
+
+![](./images/06fig07.jpg)
+
+isNullOrBlank는 널을 명시적으로 검사해서 널인 경우 true를 반환하고, 널이 아닌 경우 isBlank를 호출한다.  
+isBlank는 널이 아닌 문자열 타입의 값에 대해서만 호출할 수 있다.  
+
+```kotlin
+fun String?.isNullOfBlank(): Boolean =  // 널이 될 수 있는 String의 확장
+    this == null || this.isBlank()  // 두 번째 "this"에는 스마트 캐스트가 적용된다.
+```
+
+널이 될 수 있는 타입에 대한 확장을 정의하면 널이 될 수 있는 값에 대해 그 확장 함수를 호출할 수 있다.  
+그 함수 내부에서 this는 널이 될 수 있다.  
+따라서 명시적으로 널 여부를 검사해야 한다.  
+자바에서는 메소드 안의 this는 그 메소드가 호출된 수신 객체를 가리키므로 항상 널이 아니다.  
+(수신 객체가 널이었다면 NPE가 발생해서 메소드 안으로 들어가지도 못한다. 따라서 자바에서 메소드가 정상 실행된다면 그 메소드의 this는 항상 널이 아니다.)
+코틀린에서는 널이 될 수 있는 타입의 확장 함수 안에서는 this가 널이 될 수 있다는 점이 자바와 다르다.  
+
+앞에서 살펴본 let 함수도 널이 될 수 있는 타입의 값에 대해 호출할 수 있지만 let은 this가 널인지 검사하지 않는다.  
+널이 될 수 있는 타입의 값에 대해 안전한 호출을 사용하지 않고 let을 호출하면 람다의 인자는 널이 될 수 있는 타입으로 추론된다.  
+
+```kotlin
+>>> val person: Person? = ...
+>>> person.let { sendEmailTo(it) }  // 안전한 호출을 하지 않음. 따라서 "it"은 널이 될 수 있는 타입으로 취급됨
+ERROR: Type mismatch: inferred type is Person? but Person was expected
+```
+
+따라서 let을 사용할 때 수신 객체가 널이 아닌지 검사하고 싶다면 예전에 살펴본  
+`person?.let { sendEmailTo(it) }` 처럼 반드시 안전한 호출 연산인 ?.을 사용해야 한다.
+
+> #### 📝Note
+> 여러분이 직접 확장 함수를 작성한다면 그 확장 함수를 널이 될 수 있는 타입에 대해 정의할지 여부를 고민할 필요가 있다.   
+처음에는 널이 될 수 없는 타입에 대한 확장 함수를 정의하라.  
+나중에 대부분 널이 될 수 있는 타입에 대해 그 함수를 호출했다는 사실을 깨닫게 되면 확장 함수 안에서 널을 제대로 처리하게 되면(그 확장 함수를 사용하는 코드가 깨지지 않으므로) 안전하게 그 확장 함수를 널이 될 수 있는 타입에 대한 확장 함수로 바꿀 수 있다.  
+
+### - 타입 파라미터의 널 가능성
+
