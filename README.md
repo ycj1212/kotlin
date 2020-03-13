@@ -4399,3 +4399,191 @@ ERROR: Type mismatch: inferred type is Person? but Person was expected
 
 ### - 타입 파라미터의 널 가능성
 
+코틀린에서 함수나 클래스의 모든 타입 파라미터(제네릭?)는 기본적으로 널이 될 수 있다.  
+널이 될 수 있는 타입을 포함하는 어떤 타입이라도 타입 파라미터를 대신할 수 있다.  
+따라서 타입 파라미터 T를 클래스나 함수 안에서 타입 이름으로 사용하면 이름 끝에 물음표가 없더라도 T가 널이 될 수 있는 타입이다.
+
+```kotlin
+fun <T> printHashCode(t: T) {
+    println(t?.hashCode())  // "t"가 널이 될 수 있으므로 안전한 호출을 써야만 한다.
+}
+
+>>> printHashCode(null) // "T"의 타입은 "Any?"로 추론된다.
+null
+```
+
+printHashCode 호출에서 타입 파라미터 T에 대해 추론한 타입은 널이 될 수 있는 Any? 타입이다.  
+t 파라미터의 타입 이름 T에는 물음표가 붙어있지 않지만 t는 null을 반환할 수 있다.
+
+타입 파라미터가 널이 아님을 확실히 하려면 널이 될 수 없는 타입 상한(upper bound)을 지정해야 한다.  
+
+```kotlin
+fun <T: Any> printHashCode(t: T) {  // 이제 "T"는 널이 될 수 없는 타입이다.
+    println(t.hashCode())
+}
+
+>>> printHashCode(null)
+Error: Type parameter bound for `T` is not satisfied
+>>> printHashCode(42)
+42
+```
+
+### - 널 가능성과 자바
+
+자바 타입 시스템은 널 가능성을 지원하지 않는다.  
+자바와 코틀린을 조합한다면??  
+
+자바 코드에도 애노테이션으로 표시된 널 가능성 정보가 있다.  
+이런 정보가 코드에 있으면 코틀린도 그 정보를 활용한다.  
+자바의 `@Nullable String`은 코틀린의 `String?`과 같고, 자바의 `@NotNull String`은 코틀린의 `String`과 같다.  
+
+![](./images/06fig08.jpg)
+
+하지만 이런 널 가능성 애노테이션이 소스코드에 없는 경우 자바의 타입은 코틀린의 플랫폼 타입이 된다.  
+
+> #### 플랫폼 타입
+
+플랫폼 타입은 코틀린이 널 관련 정보를 알 수 없는 타입을 말한다.  
+그 타입을 널이 될 수 있는 타입으로 처리해도 되고 널이 될 수 없는 타입으로 처리해도 된다.  
+코틀린은 보통 널이 될 수 없는 타입의 값에 대해 널 안전성을 검사하는 연산을 수행하면 경고를 표시하지만 플랫폼 타입에 대해서는 아무런 경고도 표시하지 않는다.  
+어떤 플랫폼 타입의 값이 널이 될 수도 있음을 알고 있다면 그 값을 사용하기 전에 널인지 검사할 수 있다.  
+어떤 플랫폼 타입의 값이 널이 아님을 알고 있다면 널 검사 없이 그 값을 직접 사용해도 된다.  
+자바와 마찬가지로 당신이 틀렸다면 NPE가 발생한다.  
+
+![](./images/06fig09.jpg)
+
+```java
+/* 자바 */
+public class Person {
+    private final String name;
+
+    public Person(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+```
+
+코틀린 컴파일러는 이 경우 getName()의 String 타입의 널 가능성에 대해 전혀 알지 못한다.  
+
+```kotlin
+fun yellAt(person: Person) {
+    println(person.name.toUpperCase() + "!!!")  // toUpperCase()의 수신 객체 person.name이 널이어서 예외 발생
+}
+
+>>> yellAt(Person(null))
+java.lang.IllegalArgumentException: Parameter specified as non-null is null: method toUpperCase, parameter $receiver
+```
+
+여기서 NullPointerException이 아니라 toUpperCase()가 수신 객체($receiver)로 널을 받을 수 없다는 더 자세한 예외가 발생함에 유의하라.  
+
+실제로 코틀린 컴파일러는 public 가시성인 코틀린 함수의 널이 아닌 타입인 파리미터와 수신 객체에 대한 널 검사를 추가해준다.  
+따라서 public 가시성 함수에 널 값을 사용하면 즉시 예외가 발생한다.  
+
+getName()의 반환 타입을 널이 될 수 있는 타입으로 해석해서 널 안전성 연산을 활용해도 된다.  
+
+```kotlin
+fun yellAtSafe(person: Person) {
+    println((person.name ?: "Anyone").toUpperCase() + "!!!")
+}
+
+>>> yellAtSafe(Person(null))
+ANYONE!!!
+```
+
+> #### 코틀린이 왜 플랫폼 타입을 도입했는가?
+> 모든 자바 타입을 널이 될 수 있는 타입으로 다루면 더 안전하지 않을까?  
+물론 그래도 되지만 모든 타입을 널이 될 수 있는 타입으로 다루면 결코 널이 될 수 없는 값에 대해서도 불필요한 널 검사가 들어간다.  
+특히 제네릭을 다룰 때 상황이 더 나빠진다.  
+예를 들어 모든 자바 ArrayList<String>을 코틀린에서 ArrayList<String?>?처럼 다루면 이 배열의 원소에 접근할 때마다 널 검사를 수행하거나 안전한 캐스트를 수행해야 한다.  
+하지만 이런 식으로 처리하면 널 안전성으로 얻는 이익보다 검사에 드는 비용이 훨씬 커진다.  
+또한 모든 타입의 값에 대해 항상 널 검사를 작성하는 것은 너무 성가신 일이다.  
+그래서 코틀린 설계자들은 자바의 타입을 가져온 경우 프로그래머에게 그 타입을 제대로 처리할 책임을 부여하는 실용적인 접근 방법을 택했다.  
+
+코틀린에서 플랫폼 타입을 선언할 수는 없다.  
+자바 코드에서 가져온 타입만 플랫폼 타입이 된다.  
+하지만 IDE나 컴파일러 오류 메시지에는 플랫폼 타입을 볼 수 있다.  
+
+```kotlin
+>>> val i: Int = person.name
+ERROR: Type mismatch: inferred type is String! but Int was expected
+```
+
+여기서 코틀린 컴파일러가 표시한 String!이라는 타입은 자바에서 온 타입이다.  
+! 표기는 String! 타입의 널 가능성에 대해 아무 정보도 없다는 뜻이다.  
+
+플랫폼 타입을 널이 될 수 있는 타입이나 널이 될 수 없는 타입 어느 쪽으로든 사용할 수 있다.  
+
+```kotlin
+>>> val s: String? = person.name    // 자바 프로퍼티를 널이 될 수 있는 타입으로 볼 수 있다.
+>>> val s1: String = person.name    // 자바 프로퍼티를 널이 될 수 없는 타입으로 볼 수 있다.
+```
+
+자바에서 가져온 널 값을 널이 될 수 없는 코틀린 변수에 대입하면 실행 시점에 대입이 이뤄질 때 예외가 발생  
+
+> #### 상속
+
+코틀린에서 자바 메소드를 오버라이드할 때 그 메소드의 파라미터와 반환 타입을 널이 될 수 있는 타입으로 선언할지 널이 될 수 없는 타입으로 선언할지 결정해야 한다.  
+
+```java
+/* 자바 */
+interface StringProcessor {
+    void process(String value);
+}
+```
+
+코틀린 컴파일러는 다음과 같은 두 구현을 다 받아들인다.
+
+```kotlin
+class StringPrinter : StringProcessor {
+    override fun process(value: String) {
+        println(value)
+    }
+}
+
+class NullableStringPrinter : StringProcessor {
+    override fun process(value: String?) {
+        if (value != null) {
+            println(value)
+        }
+    }
+}
+```
+
+자바 클래스나 인터페이스를 코틀린에서 구현할 경우 널 가능성 검사를 제대로 처리하는 일이 중요하다.  
+
+
+## 코틀린의 원시 타입
+
+코틀린은 원시 타입과 래퍼 타입을 구분하지 않는다.  
+
+### - 원시 타입: Int, Boolean 등
+
+자바는 원시 타입과 참조 타입을 구분한다.  
+원시 타입의 변수에는 그 값이 직접 들어가지만, 참조 타입의 변수에는 메모리상의 객체 위치가 들어간다.  
+자바는 참조 타입이 필요한 경우 특별한 래퍼 타입으로 원시 타입 값을 감싸서 사용한다.  
+예를 들어 정수의 컬렉션을 정의하려면 `Collection<int>`가 아니라 `Collection<Integer>`를 사용해야 한다.  
+
+코틀린은 원시 타입과 래퍼 타입을 구분하지 않으므로 항상 같은 타입을 사용한다.  
+
+```kotlin
+val i: Int = 1
+val list: List<Int> = listOf(1, 2, 3)
+```
+
+더 나아가 코틀린에서는 숫자 타입 등 원시 타입의 값에 대해 메소드를 호출할 수 있다.  
+
+```kotlin
+fun showProgress(progress: Int) {
+    val percent = progress.coerceIn(0, 100)
+    println("We're ${percent}% done!")
+}
+
+>>> showProgress(146)
+We're 100% done!
+```
+
+ 
