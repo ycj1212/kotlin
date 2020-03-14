@@ -4586,4 +4586,323 @@ fun showProgress(progress: Int) {
 We're 100% done!
 ```
 
- 
+실행 시점에 숫자 타입은 가능한 한 가장 효율적인 방식으로 표현된다.  
+대부분의 경우 코틀린의 Int 타입은 자바 int 타입으로 컴파일된다.  
+이런 컴파일이 불가능한 경우는 컬렉션과 제네릭 클래스를 사용하는 경우뿐이다.  
+예를 들어 Int 타입을 컬렉션의 타입 파라미터로 넘기면 그 컬렉션에는 Int의 래퍼 타입에 해당하는 java.lang.Integer 객체가 들어간다.  
+
+자바 원시 타입에 해당하는 타입은 다음과 같다.
+
+- 정수 타입: Byte, Short, Int, Long
+- 부동소수점 수 타입: Float, Double
+- 문자 타입: Char
+- 불리언 타입: Boolean
+
+Int와 같은 코틀린 타입에는 널 참조가 들어갈 수 없기 때문에 쉽게 그에 상응하는 자바 원시 타입으로 컴파일할 수 있다.  
+반대로 자바 원시 타입의 값은 결코 널이 될 수 없으므로 자바 원시 타입을 코틀린에서 사용할 때도 (플랫폼 타입이 아니라) 널이 될 수 없는 타입으로 취급할 수 있다.  
+
+### - 널이 될 수 있는 원시 타입: Int?, Boolean? 등
+
+null 참조를 자바의 참조 타입의 변수에만 대입할 수 있기 때문에 널이 될 수 있는 코틀린 타입은 자바 원시 타입으로 표현할 수 없다.  
+따라서 코틀린에서 널이 될 수 있는 원시 타입을 사용하면 그 타입은 자바의 래퍼 타입으로 컴파일된다.  
+
+```kotlin
+data class Person(val name: String,
+                  val age: Int? = null) {
+    fun isOlderThan(other: Person): Boolean? {
+        if (age == null || other.age == null)
+            return null
+        return age > other.age
+    }
+}
+
+>>> println(Person("Sam", 35).isOlderThan(Person("Amy", 42)))
+false
+>>> println(Person("Sam", 35).isOlderThan(Person("Jane")))
+null
+```
+
+널이 될 가능성이 있으므로 Int? 타입의 두 값을 직접 비교할 수는 없다.  
+
+Person 클래스에 선언된 age 프로퍼티의 값은 java.lang.Integer로 저장된다.  
+
+제네릭 클래스의 경우 래퍼 타입을 사용한다.  
+어떤 클래스의 타입 인자로 원시 타입을 넘기면 코틀린은 그 타입에 대한 박스 타입을 사용한다.  
+예를 들어 다음 문장에서는 null 값이나 널이 될 수 있는 타입을 전혀 사용하지 않았지만 만들어지는 리스트는 래퍼인 Integer 타입으로 이뤄진 리스트다.  
+
+```kotlin
+val listOfInts = listOf(1, 2, 3)
+```
+
+자바 가상머신에서는 타입 인자로 원시 타입을 허용하지 않는다.  
+따라서 자바나 코틀린 모두에서 제네릭 클래스는 항상 박스 타입을 사용해야 한다.  
+
+### - 숫자 변환
+
+코틀린은 한 타입의 숫자를 다른 타입의 숫자로 자동 변환하지 않는다.  
+
+```kotlin
+val i = 1
+val l: Long = i // "Error: type mismatch" 컴파일 오류 발생
+```
+
+대신 직접 메소드를 호출해야 한다.  
+
+```kotlin
+val i = 1
+val l: Long = i.toLong()
+```
+
+코틀린은 Boolean을 제외한 모든 원시 타입에 대한 변환 함수를 제공한다.  
+양방향 변환 함수가 모두 제공된다.  
+표현 범위가 더 넓은 타입으로 변환하는 함수도 있고(`Int.toLong()`),  
+표현 범위가 더 좁은 타입으로 변환하면서 값을 벗어나는 경우에는 일부를 잘라내는 함수도 있다(`Long.toInt()`).  
+
+코틀린은 개발자의 혼란을 피하기 위해 타입 변환을 명시하기로 결정했다.  
+타입을 비교하는 경우 두 박스 타입 간의 equals 메소드는 그 안에 들어있는 값이 아니라 박스 타입 객체를 비교한다.  
+따라서 자바에서 new Integer(42).equals(new Long(42))는 false다.
+
+```kotlin
+val x = 1   // Int 타입인 변수
+val list = listOf(1L, 2L, 3L)   // Long 값으로 이뤄진 리스트
+x in list   // 묵시적 타입 변환으로 인해 false임
+```
+
+묵시적 타입 변환이 되는건가..?
+
+코틀린에서는 타입을 명시적으로 변환해서 같은 타입의 값으로 만든 후 비교해야 한다.
+
+```kotlin
+>>> val x = 1
+>>> println(x.toLong() in listOf(1L, 2L, 3L))
+true
+```
+
+> #### 원시 타입 리터럴
+> 코틀린은 소스코드에서 단순한 10진수(정수) 외에 다음과 같은 숫자 리터럴을 허용한다.  
+> - L 접미사가 붙은 Long 타입 리터럴: 123L
+> - 표준 부동소수점 표기법을 사용한 Double 타입 리터럴: 0.12, 2.0, 1.2e10, 1.2e-10
+> - f나 F 접미사가 붙은 Float 타입 리터럴: 123.4f, .456F, 1e3f
+> - 0x나 0X 접두사가 붙은 16진수 리터럴: 0xCAFEBABE, 0xbcdL
+> - 0b나 0B 접두사가 붙은 2진수 리터럴: 0b000000101
+> 
+> 코틀린 1.1부터는 숫자 리터럴 중간이 밑줄(_)을 넣울 수 있다(1_234, 1_0000_0000_0000L, 1_000.123_456, 0b0100_0001 등)
+
+숫자 리터럴을 사용할 때는 보통 변환 함수를 호출할 필요가 없다.  
+추가로 산술 연산자는 적당한 타입의 값을 받아들일 수 있게 이미 오버로드돼 있다.  
+
+```kotlin
+fun foo(l: Long) = println(l)
+
+>>> val b: Byte = 1 // 상수 값으 적절한 타입으로 해석된다.
+>>> val l: = b + 1L // + 는 Byte와 Long을 인자로 받을 수 있다.
+>>> foo(42) // 컴파일러는 42를 Long 값으로 해석한다.
+42
+```
+
+코틀린은 오버플로우를 검사하느라 추가 비용을 들이지 않는다.  
+
+> #### 문자열을 숫자로 변환하기
+> 코틀린 표준 라이브러리는 문자열을 원시 타입으로 변환하는 여러 함수를 제공한다(toInt, toByte, toBoolean 등).  
+>
+> ```kotlin
+> >>> println("42".toInt())
+> 42
+> ```
+>
+> 이런 함수는 문자열의 내용을 각 원시 타입을 표기하는 문자열로 파싱한다.  
+파싱에 실패하면 NumberFormatException이 발생한다.  
+
+### - Any, Any?: 최상위 타입
+
+자바에서 클래스 계층의 최상위 타입은 Object  
+코틀린에서 모든 널이 될 수 없는 타입의 조상 타입은 Any 다.  
+하지만 자바에서는 원시 타입은 Object 계층에 들어있지 않다.  
+코틀린에서는 Any가 원시 타입을 포함한 모든 타입의 조상 타입이다.  
+
+```kotlin
+val answer: Any = 42    // Any가 참조 타입이기 때문에 42가 박싱된다.
+```
+
+Any는 널이 될 수 없는 타입이므로 Any 타입의 변수에는 null이 들어갈 수 없다.  
+널을 포함하려면 Any? 타입을 사용해야 한다.  
+
+내부에서 Any 타입은 java.lang.Object에 대응한다.  
+더 정확히 말하면 널이 될 수 있는지 여부를 알 수 없으므로 플랫폼 타입인 Any!로 취급한다.  
+코틀린 함수가 Any를 사용하면 자바 바이트코드의 Object로 컴파일 된다.  
+
+모든 코틀린 클래스에는 toString, equals, hachCode라는 세 메소드가 들어있다.  
+이 세 메소드는 Any에 정의된 메소드를 상속한 것이다.  
+하지만 java.lang.Object에 있는 다른 메소드(wait나 notify 등)는 Any에서 사용할 수 없다.  
+그런 메소드를 호출하고 싶다면 Object 타입으로 값을 캐스트 해야한다.  
+
+### - Unit 타입: 코틀린의 void
+
+```kotlin
+fun f(): Unit { ... }
+```
+
+이는 반환 타입 선언 없이 정의한 블록이 본문인 함수와 같다.  
+
+```kotlin
+fun f() { ... } // 반환 타입을 명시하지 않았다.
+```
+
+Unit은 모든 기능을 갖는 일반적인 타입이며, void와 달리 Unit을 타입 인자로 쓸 수 있다.  
+Unit 타입에 속한 값은 단 하나뿐이며, 그 이름도 Unit이다.  
+Unit 타입의 함수는 Unit 값을 묵시적으로 반환한다.  
+
+```kotlin
+interface Processor<T> {
+    fun process(): T
+}
+
+class NoResultProcessor : Processor<Unit> {
+    override fun process() {    // Unit을 반환하지만 타입을 지정할 필요는 없다.
+        // 업무 처리 코드
+    }   // 여기서 return을 명시할 필요가 없다.
+}
+```
+
+NoResultProcessor에서 명시적으로 Unit을 반환할 필요는 없다.  
+컴파일러가 묵시적으로 return Unit을 넣어준다.
+
+### - Nothing 타입: 이 함수는 결코 정상적으로 끝나지 않는다
+
+'반환 값'이라는 개념 자체가 의미 없는 함수가 일부 존재한다.  
+예를 들어 무한 루프를 도는 함수도 결코 값을 반환하며, 정상적으로 끝나지 않는다.  
+이런 경우를 표현하기 위해 코틀린에는 Nothing이라는 특별한 반환 타입이 있다.  
+
+```kotlin
+fun fail(mesage: String): Nothing {
+    throw IllegalStateException(message)
+}
+
+>>> fail("Error occurred")
+java.lang.IllegalStateException: Error occurred
+```
+
+Nothing 타입은 아무 값도 포함하지 않는다.  
+
+Nothing을 반환하는 함수를 엘비스 연산자의 우항에 사용해서 전제 조건을 검사할 수 있다.  
+
+```kotlin
+val address = company.address ?: fail("No address")
+println(address.city)
+```
+
+컴파일러는 Nothing이 반환 타입인 함수가 결코 정상 종료되지 않음을 알고 그 함수를 호출하는 코드를 분석할 때 사용한다.  
+위의 예제에서 컴파일러는 company.address가 널인 경우 엘비스 연산자의 우항에서 예외가 발생한다는 사실을 파악하고 address의 값이 널이 아님을 추론할 수 있다.  
+
+## 컬렉션과 배열
+
+### - 널 가능성과 컬렉션
+
+```kotlin
+fun readNumbers(reader: BufferedReader): List<Int?> {
+    val result = ArrayList<Int?>()  // 널이 될 수 있는 Int 값으로 이뤄진 리스트를 만든다.
+    for (line in reader.lineSequence()) {
+        try {
+            val number = line.toInt()
+            result.add(number)  // 정수(널이 아닌 값)를 리스트에 추가한다.
+        }
+        catch(e: NumberFormatException) {
+            result.add(null)    // 현재 줄을 파싱할 수 없으므로 리스트에 널을 추가한다.
+        }
+    }
+    return result
+}
+```
+
+List<Int?>는 Int? 타입의 값을 저장할 수 있다.  
+코틀린 1.1부터는 파싱에 실패하면 null을 반환하는 String.toIntOrNull을 사용해 이 예제를 더 줄일 수 있다.  
+
+![](./images/06fig10.jpg)
+
+경우에 따라 널이 될 수 있는 값으로 이뤄진 널이 될 수 있는 리스트를 정의해야 한다면 물음표를 2개 사용해 List<Int?>?로 표현한다.  
+이런 리스트를 처리할 때는 변수에 대해 널 검사를 수행한 다음에 그 리스트에 속한 모든 원소에 대해 다시 널 검사를 수행해야 한다.  
+
+```kotlin
+fun addValidNumbers(numbers: List<Int?>) {
+    var sumOfValidNumbers = 0
+    var invalidNumbers = 0
+    for (number in numbers) {
+        if (number != null) {
+            sumOfValidNumbers += number
+        } else {
+            invalidNumbers++
+        }
+    }
+    println("Sum of valid numbers: $sumOfValidNumbers")
+    println("Invalid numbers: $invalidNumbers")
+}
+
+>>> val reader = BufferedReader(StringReader("1\nabc\n42"))
+>>> val numbers = readNumbers(reader)
+>>> addValidNumbers(numbers)
+Sum of valid numbers: 43
+Invalid numbers: 1
+```
+
+코틀린 표준 라이브러리 함수 filterNotNull 사용
+
+```kotlin
+fun addValidNumbers(numbers: List<Int?>) {
+    val validNumbers = numbers.filterNotNull()
+    println("Sum of valid numbers: ${validNumbers.sum()}")
+    println("Invalid numbers: ${numbers.size - validNumbers.size}")
+}
+```
+
+filterNotNull이 컬렉션 안에 널이 들어있지 않음을 보장해주므로 validNumbers는 List<Int> 타입이다.
+
+### - 읽기 전용과 변경 가능한 컬렉션
+
+코틀린 컬렉션과 자바 컬렉션을 나누는 가장 중요한 특성 하나는 코틀린에서는 컬렉션 안의 데이터에 접근하는 인터페이스와 컬렉션 안의 데이터를 변경하는 인터페이스를 분리했다는 점이다.
+
+![](./images/06fig11.jpg)
+
+MutableCollection은 Collection을 확장하면서 컬렉션 내용을 변경하는 메소드를 더 제공한다.  
+
+어떤 컴포넌트의 내부 상태에 컬렉션이 포함된다면 그 컬렉션을 MutableCollection을 인자로 받는 함수에 전달할 때는 어쩌면 원본의 변경을 막기 위해 컬렉션을 복사해야할 수도 있다(이런 패턴을 방어적 복사(defensive copy)라고 부른다).
+
+```kotlin
+fun <T> copyElement(source: Collection<T>,
+                    target: MutableCollection<T>) {
+    for (item in source) {  // source 컬렉션의 모든 원소에 대해 루프를 돈다.
+        target.add(item)    // 변경 가능한 target 컬렉션에 원소를 추가한다.
+    }
+}
+
+>>> val source: Collection<Int> = arrayListOf(3, 5, 7)
+>>> val target: MutableCollection<Int> = arrayListOf(1)
+>>> copyElement(source, target)
+>>> println(target)
+[1, 3, 5, 7]
+```
+
+target에 해당하는 인자로 읽기 전용 컬렉션을 넘길 수 없다.  
+
+```kotlin
+>>> val source: Collection<Int> = arrayListOf(3, 5, 7)
+>>> val target: Collection<Int> = arrayListOf(1)
+>>> copyElements(source, target)    // "target" 인자에서 컴파일 오류 발생
+Error: Type mismatch: inferred type is Collection<Int> but MutableCollection<Int> was expected
+```
+
+컬렉션 인터페이스를 사용할 때 항상 염두에 둬야 할 핵심은 읽기 전용 컬렉션이라고 해서 꼭 변경 불가능한 컬렉션일 필요는 없다.  
+읽기 전용 인터페이스 타입인 변수를 사용할 때 그 인터페이스는 실제로는 어떤 컬렉션 인스턴스를 가리키는 수많은 참조 중 하나일 수 있다.
+
+![](./images/06fig12.jpg)
+
+따라서 읽기 전용 컬렉션이 항상 스레드 안전(thread safe)하지 않다는 점을 명심해야 한다.  
+다중 스레드 환경에서 데이터를 다루는 경우 그 데이터를 적절히 동기화하거나 동시 접근을 허용하는 데이터 구조를 활용해야 한다.  
+
+### - 코틀린 컬렉션과 자바
+
+모든 코틀린 컬렉션은 그에 상응하는 자바 컬렉션 인터페이스의 인스턴스이다.  
+
+![](./images/06fig13_alt.jpg)
+
+변경 가능한 인터페이스는 java.util 패키지에 있는 인터페이스와 직접적으로 연관되지만 읽기 전용 인터페이스에는 컬렉션을 변경할 수 있는 모든 요소가 빠져있다.  
+
